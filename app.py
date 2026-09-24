@@ -74,7 +74,6 @@ col_tit, col_num = st.columns([3, 1])
 with col_tit:
     st.title("🏈 Scout Pumas CU")
 with col_num:
-    # Muestra el número de la jugada actual
     st.metric("Jugada Actual", len(st.session_state.lista_jugadas) + 1)
 
 if st.session_state.msg_exito:
@@ -114,13 +113,23 @@ with col_y:
         st.session_state.direccion_actual = dir_val
 
 with col_d:
-    d_c1, d_c2 = st.columns(2)
-    with d_c1:
-        down_val = st.number_input("⬇️ Down", min_value=1, max_value=4, value=st.session_state.down, disabled=es_drive)
-        if not es_drive: st.session_state.down = down_val
-    with d_c2:
-        dist_val = st.number_input("📏 Distancia", min_value=1, value=st.session_state.distancia, disabled=es_drive)
-        if not es_drive: st.session_state.distancia = dist_val
+    st.write("⬇️ **Down**")
+    dw1, dw2, dw3, dw4 = st.columns(4)
+    # Botones grandes para el Down en lugar de selector numérico
+    if dw1.button("1", type="primary" if st.session_state.down == 1 else "secondary", use_container_width=True, disabled=es_drive):
+        st.session_state.down = 1; st.rerun()
+    if dw2.button("2", type="primary" if st.session_state.down == 2 else "secondary", use_container_width=True, disabled=es_drive):
+        st.session_state.down = 2; st.rerun()
+    if dw3.button("3", type="primary" if st.session_state.down == 3 else "secondary", use_container_width=True, disabled=es_drive):
+        st.session_state.down = 3; st.rerun()
+    if dw4.button("4", type="primary" if st.session_state.down == 4 else "secondary", use_container_width=True, disabled=es_drive):
+        st.session_state.down = 4; st.rerun()
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # La distancia se queda abajo de los botones de down
+    dist_val = st.number_input("📏 Distancia", min_value=1, value=st.session_state.distancia, disabled=es_drive)
+    if not es_drive: st.session_state.distancia = dist_val
 
 st.markdown("---")
 
@@ -268,5 +277,11 @@ if st.session_state.lista_jugadas:
         with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
             df_jugadas.to_excel(writer, index=False, sheet_name='Practica')
         st.download_button("📊 Descargar Tabla Excel", data=excel_buffer.getvalue(), file_name='reporte.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("🗑️ Iniciar Nueva Práctica (Borrar Datos)", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
 else:
     st.warning("No hay jugadas registradas en esta sesión.")
