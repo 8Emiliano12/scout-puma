@@ -33,6 +33,11 @@ st.markdown("""
         font-weight: 800;
         color: #1a1a1a;
     }
+    /* Estilo para hacer el número de jugada más visible */
+    [data-testid="stMetricValue"] {
+        font-size: 40px !important;
+        color: #1F4E78;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -40,12 +45,12 @@ st.markdown("""
 if 'lista_jugadas' not in st.session_state: st.session_state.lista_jugadas = []
 if 'yarda_actual' not in st.session_state: st.session_state.yarda_actual = 20
 if 'territorio' not in st.session_state: st.session_state.territorio = "Propio"
-if 'modo_avance' not in st.session_state: st.session_state.modo_avance = "📍 Fijo (Estático)"
+if 'modo_avance' not in st.session_state: st.session_state.modo_avance = "🏈 Drive (Avanza)"
 if 'down' not in st.session_state: st.session_state.down = 1
 if 'distancia' not in st.session_state: st.session_state.distancia = 10
 if 'msg_exito' not in st.session_state: st.session_state.msg_exito = ""
 if 'resultado' not in st.session_state: st.session_state.resultado = "Pass"
-if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual = "Alberca (Izq)"
+if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual = "Alberca"
 
 LISTA_QB = ["N/A", "3 - Garza", "10 - Sánchez", "17 - Corona"]
 LISTA_RB = ["N/A", "23 - Pérez", "26 - Schrader", "32 - Báez", "34 - Melo", "35 - Santillán", "44 - Hernández"]
@@ -65,7 +70,12 @@ LISTA_DEFENSA = [
 ]
 
 # --- 3. INTERFAZ GRÁFICA ---
-st.title("🏈 Scout Pumas CU")
+col_tit, col_num = st.columns([3, 1])
+with col_tit:
+    st.title("🏈 Scout Pumas CU")
+with col_num:
+    # Muestra el número de la jugada actual
+    st.metric("Jugada Actual", len(st.session_state.lista_jugadas) + 1)
 
 if st.session_state.msg_exito:
     st.success(st.session_state.msg_exito)
@@ -81,24 +91,36 @@ col_y, col_d = st.columns([2, 1])
 with col_y:
     t1, t2 = st.columns(2)
     with t1:
-        st.session_state.territorio = st.radio("Territorio", ["Propio", "Rival"], horizontal=True, index=0 if st.session_state.territorio == "Propio" else 1)
+        modo_idx = 0 if st.session_state.modo_avance == "📍 Fijo (Estático)" else 1
+        modo_val = st.radio("Modo de Serie", ["📍 Fijo (Estático)", "🏈 Drive (Avanza)"], horizontal=True, index=modo_idx)
+        st.session_state.modo_avance = modo_val
+    
+    es_drive = (st.session_state.modo_avance == "🏈 Drive (Avanza)")
+    
     with t2:
-        st.session_state.modo_avance = st.radio("Modo de Serie", ["📍 Fijo (Estático)", "🏈 Drive (Avanza)"], horizontal=True, index=0 if st.session_state.modo_avance == "📍 Fijo (Estático)" else 1)
+        terr_idx = 0 if st.session_state.territorio == "Propio" else 1
+        terr_val = st.radio("Territorio", ["Propio", "Rival"], horizontal=True, index=terr_idx, disabled=es_drive)
+        if not es_drive: st.session_state.territorio = terr_val
         
-    st.session_state.yarda_actual = st.slider("Línea de Golpeo", min_value=1, max_value=50, value=st.session_state.yarda_actual)
+    yarda_val = st.slider("Línea de Golpeo", min_value=1, max_value=50, value=st.session_state.yarda_actual, disabled=es_drive)
+    if not es_drive: st.session_state.yarda_actual = yarda_val
     
     hy1, hy2 = st.columns(2)
     with hy1:
-        hash_mark = st.radio("➖ Hash", ["L", "M", "R"], horizontal=True)
+        hash_mark = st.radio("➖ Hash", ["L (Izquierdo)", "M (Centro)", "R (Derecho)"], horizontal=True)
     with hy2:
-        st.session_state.direccion_actual = st.radio("🧭 Atacando hacia:", ["Alberca (Izq)", "Canchas (Der)"], horizontal=True, index=0 if st.session_state.direccion_actual == "Alberca (Izq)" else 1)
+        dir_idx = 0 if st.session_state.direccion_actual == "Alberca" else 1
+        dir_val = st.radio("🧭 Atacando hacia:", ["Alberca", "Canchas"], horizontal=True, index=dir_idx)
+        st.session_state.direccion_actual = dir_val
 
 with col_d:
     d_c1, d_c2 = st.columns(2)
     with d_c1:
-        down = st.number_input("⬇️ Down", min_value=1, max_value=4, key="down")
+        down_val = st.number_input("⬇️ Down", min_value=1, max_value=4, value=st.session_state.down, disabled=es_drive)
+        if not es_drive: st.session_state.down = down_val
     with d_c2:
-        distancia = st.number_input("📏 Distancia", min_value=1, key="distancia")
+        dist_val = st.number_input("📏 Distancia", min_value=1, value=st.session_state.distancia, disabled=es_drive)
+        if not es_drive: st.session_state.distancia = dist_val
 
 st.markdown("---")
 
@@ -177,8 +199,8 @@ if ganancia_final is not None:
     nueva_jugada = {
         "TITLE": periodo_actual,  
         "PLAY #": len(st.session_state.lista_jugadas) + 1,
-        "DIRECTION": st.session_state.direccion_actual.split(" ")[0], 
-        "HASH": hash_mark,
+        "DIRECTION": st.session_state.direccion_actual, 
+        "HASH": hash_mark[0], # Extrae solo la "L", "M" o "R"
         "YARD LN": yard_str, 
         "DN": st.session_state.down,               
         "DIST": st.session_state.distancia,        
