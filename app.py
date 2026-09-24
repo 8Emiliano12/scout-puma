@@ -58,7 +58,7 @@ st.subheader("📍 1. Posición del Balón")
 col_cancha, col_datos = st.columns([2, 1])
 
 with col_cancha:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/American_football_field.svg/1000px-American_football_field.svg.png", use_column_width=True)
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/American_football_field.svg/1000px-American_football_field.svg.png", use_container_width=True)
     st.session_state.yarda_actual = st.slider("Desliza para mover el balón de yarda", min_value=1, max_value=50, value=st.session_state.yarda_actual)
 
 with col_datos:
