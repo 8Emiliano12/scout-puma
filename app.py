@@ -7,7 +7,6 @@ st.set_page_config(page_title="Pumas CU Scout", page_icon="🏈", layout="wide",
 
 st.markdown("""
     <style>
-    /* Estilos generales para botones secundarios */
     div.stButton > button {
         height: 60px;
         font-size: 18px !important;
@@ -17,13 +16,11 @@ st.markdown("""
         color: black;
         border: 2px solid #dcdcdc;
     }
-    /* Botones primarios (Seleccionados o Guardar) */
     div.stButton > button[kind="primary"] {
         background-color: #1F4E78;
         color: white;
         border: none;
     }
-    /* Botón de descarga */
     div.stDownloadButton > button {
         height: 80px;
         font-size: 20px !important;
@@ -31,7 +28,7 @@ st.markdown("""
         color: white;
         border-radius: 12px;
     }
-    .stSelectbox label, .stTextInput label, .stNumberInput label, .stRadio label, .stSlider label {
+    .stSelectbox label, .stTextInput label, .stNumberInput label, .stRadio label, .stSlider label, .stCheckbox label {
         font-size: 18px !important;
         font-weight: 800;
         color: #1a1a1a;
@@ -39,15 +36,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. INICIALIZACIÓN DE MEMORIA INTELIGENTE ---
+# --- 2. INICIALIZACIÓN DE MEMORIA ---
 if 'lista_jugadas' not in st.session_state: st.session_state.lista_jugadas = []
 if 'yarda_actual' not in st.session_state: st.session_state.yarda_actual = 20
+if 'territorio' not in st.session_state: st.session_state.territorio = "Propio"
+if 'modo_avance' not in st.session_state: st.session_state.modo_avance = "📍 Fijo (Estático)"
 if 'down' not in st.session_state: st.session_state.down = 1
 if 'distancia' not in st.session_state: st.session_state.distancia = 10
 if 'msg_exito' not in st.session_state: st.session_state.msg_exito = ""
 if 'resultado' not in st.session_state: st.session_state.resultado = "Pass"
+if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual = "Alberca (Izq)"
 
-# Listas de Jugadores
 LISTA_QB = ["N/A", "3 - Garza", "10 - Sánchez", "17 - Corona"]
 LISTA_RB = ["N/A", "23 - Pérez", "26 - Schrader", "32 - Báez", "34 - Melo", "35 - Santillán", "44 - Hernández"]
 LISTA_WR = ["N/A", "1 - Blanco", "12 - Cardona", "13 - Vivas", "14 - Medrano", "18 - Ponce", "81 - Román", "82 - Reyes", "83 - Reyes", "84 - Granados", "88 - Villafuerte", "98 - Miranda"]
@@ -75,13 +74,24 @@ if st.session_state.msg_exito:
 periodo_actual = st.selectbox("⏱️ PERIODO DE PRÁCTICA", ["SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "TEAM", "OTRO"])
 st.markdown("---")
 
-# --- FILA 1: POSICIÓN ---
-st.subheader("📍 1. Posición y Contexto")
+# --- FILA 1: POSICIÓN Y MODO DE AVANCE ---
+st.subheader("📍 1. Posición del Balón")
 col_y, col_d = st.columns([2, 1])
 
 with col_y:
-    st.session_state.yarda_actual = st.slider("Línea de Golpeo (Yarda estática)", min_value=1, max_value=50, value=st.session_state.yarda_actual)
-    hash_mark = st.radio("➖ Hash", ["L", "M", "R"], horizontal=True)
+    t1, t2 = st.columns(2)
+    with t1:
+        st.session_state.territorio = st.radio("Territorio", ["Propio", "Rival"], horizontal=True, index=0 if st.session_state.territorio == "Propio" else 1)
+    with t2:
+        st.session_state.modo_avance = st.radio("Modo de Serie", ["📍 Fijo (Estático)", "🏈 Drive (Avanza)"], horizontal=True, index=0 if st.session_state.modo_avance == "📍 Fijo (Estático)" else 1)
+        
+    st.session_state.yarda_actual = st.slider("Línea de Golpeo", min_value=1, max_value=50, value=st.session_state.yarda_actual)
+    
+    hy1, hy2 = st.columns(2)
+    with hy1:
+        hash_mark = st.radio("➖ Hash", ["L", "M", "R"], horizontal=True)
+    with hy2:
+        st.session_state.direccion_actual = st.radio("🧭 Atacando hacia:", ["Alberca (Izq)", "Canchas (Der)"], horizontal=True, index=0 if st.session_state.direccion_actual == "Alberca (Izq)" else 1)
 
 with col_d:
     d_c1, d_c2 = st.columns(2)
@@ -92,7 +102,7 @@ with col_d:
 
 st.markdown("---")
 
-# --- FILA 2: RESULTADO (COMO BOTONES) ---
+# --- FILA 2: RESULTADO ---
 st.subheader("🏁 2. Tipo de Jugada")
 r1, r2, r3, r4, r5, r6 = st.columns(6)
 
@@ -111,7 +121,7 @@ if r6.button("🦅 INT", type="primary" if st.session_state.resultado == "Interc
 
 st.markdown("---")
 
-# --- FILA 3: JUGADORES (Sin Formación/Personal) ---
+# --- FILA 3: JUGADORES ---
 st.subheader("👥 3. Jugadores Involucrados")
 
 col_ofensa, col_defensa = st.columns(2)
@@ -134,39 +144,45 @@ with col_defensa:
 
 st.markdown("---")
 
-# --- FILA 4: GUARDADO RÁPIDO ---
-st.subheader("⚡ 4. Guardado Rápido")
-st.write("Toca un botón para registrar la yarda ganada y guardar la jugada al instante.")
+# --- FILA 4: GUARDADO RÁPIDO Y TOUCHDOWN ---
+st.subheader("⚡ 4. Ganancia y Guardado")
 
 ganancia_final = None
+distancia_al_td = (100 - st.session_state.yarda_actual) if st.session_state.territorio == "Propio" else st.session_state.yarda_actual
 
 b1, b2, b3, b4, b5 = st.columns(5)
 if b1.button("0 Yds", use_container_width=True, type="primary"): ganancia_final = 0
 if b2.button("+3 Yds", use_container_width=True, type="primary"): ganancia_final = 3
 if b3.button("+5 Yds", use_container_width=True, type="primary"): ganancia_final = 5
-# Auto-calcula lo necesario para el 1er down
 if b4.button(f"1er Down (+{st.session_state.distancia})", use_container_width=True, type="primary"): ganancia_final = st.session_state.distancia
+if b5.button("🔥 TOUCHDOWN", use_container_width=True, type="primary"): ganancia_final = distancia_al_td
 
 ganancia_manual = st.number_input("O ingresa yardas manual (Usa '-' para capturas):", value=0, step=1)
-if b5.button("✅ Guardar Manual", use_container_width=True, type="primary"):
+if st.button("✅ Guardar Manual", use_container_width=True, type="primary"):
     ganancia_final = ganancia_manual
 
-# --- MOTOR LÓGICO DE GUARDADO ---
+# --- MOTOR LÓGICO Y MATEMÁTICO ---
 if ganancia_final is not None:
     if st.session_state.resultado == "Incompleto": ganancia_final = 0
     if st.session_state.resultado == "Sack" and ganancia_final > 0: ganancia_final = -ganancia_final 
     
+    is_td = False
+    if ganancia_final >= distancia_al_td and st.session_state.resultado in ["Pass", "Rush", "Scramble"]:
+        is_td = True
+        ganancia_final = distancia_al_td 
+        
+    resultado_str = st.session_state.resultado + (" TD" if is_td else "")
+    yard_str = "50" if st.session_state.yarda_actual == 50 else f"{st.session_state.territorio[0]}{st.session_state.yarda_actual}"
+    
     nueva_jugada = {
         "TITLE": periodo_actual,  
         "PLAY #": len(st.session_state.lista_jugadas) + 1,
-        "PERSONNEL": "", # Mantenemos la columna en blanco para que Hudl no rompa el CSV
+        "DIRECTION": st.session_state.direccion_actual.split(" ")[0], 
         "HASH": hash_mark,
-        "YARD LN": st.session_state.yarda_actual, 
+        "YARD LN": yard_str, 
         "DN": st.session_state.down,               
         "DIST": st.session_state.distancia,        
-        "OFF FORM": "",
-        "OFF PLAY": "",
-        "RESULT": st.session_state.resultado, 
+        "RESULT": resultado_str, 
         "GAIN/LS": ganancia_final,
         "RUNNER": runner.split(" - ")[0] if runner != "N/A" else "",
         "RECEIVER": receiver.split(" - ")[0] if receiver != "N/A" else "",
@@ -176,21 +192,39 @@ if ganancia_final is not None:
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
-    if st.session_state.resultado == "Interception":
-        st.session_state.down = 1
-        st.session_state.distancia = 10
-    else:
-        if ganancia_final >= st.session_state.distancia:
+    # ACTUALIZACIONES SEGÚN EL MODO ELEGIDO
+    if st.session_state.modo_avance == "🏈 Drive (Avanza)":
+        # 1. Actualizar Downs
+        if st.session_state.resultado == "Interception" or is_td:
             st.session_state.down = 1
             st.session_state.distancia = 10
         else:
-            st.session_state.down += 1
-            st.session_state.distancia -= ganancia_final
-            if st.session_state.down > 4:
+            if ganancia_final >= st.session_state.distancia:
                 st.session_state.down = 1
                 st.session_state.distancia = 10
+            else:
+                st.session_state.down += 1
+                st.session_state.distancia -= ganancia_final
+                if st.session_state.down > 4:
+                    st.session_state.down = 1
+                    st.session_state.distancia = 10
+                    
+        # 2. Mover Balón Automáticamente
+        abs_yard = st.session_state.yarda_actual if st.session_state.territorio == "Propio" else 100 - st.session_state.yarda_actual
+        new_abs = abs_yard + ganancia_final
+        
+        if new_abs >= 100 or new_abs <= 0:
+            st.session_state.territorio = "Propio"
+            st.session_state.yarda_actual = 20 
+        else:
+            if new_abs <= 50:
+                st.session_state.territorio = "Propio"
+                st.session_state.yarda_actual = new_abs
+            else:
+                st.session_state.territorio = "Rival"
+                st.session_state.yarda_actual = 100 - new_abs
                 
-    st.session_state.msg_exito = f"¡Jugada {len(st.session_state.lista_jugadas)} guardada! Avance: {ganancia_final} yds."
+    st.session_state.msg_exito = f"¡Jugada {len(st.session_state.lista_jugadas)} guardada en modo {st.session_state.modo_avance.split(' ')[1]}! Avance: {ganancia_final} yds. {'🔥 TOUCHDOWN' if is_td else ''}"
     st.rerun() 
 
 st.markdown("<br><br>", unsafe_allow_html=True) 
