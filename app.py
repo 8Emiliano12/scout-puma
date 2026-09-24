@@ -101,7 +101,21 @@ with col_y:
         terr_val = st.radio("Territorio", ["Propio", "Rival"], horizontal=True, index=terr_idx, disabled=es_drive)
         if not es_drive: st.session_state.territorio = terr_val
         
-    yarda_val = st.slider("Línea de Golpeo", min_value=1, max_value=50, value=st.session_state.yarda_actual, disabled=es_drive)
+    st.write("🎯 **Yarda Rápida**")
+    yb1, yb2, yb3, yb4, yb5 = st.columns(5)
+    # Botones de acceso rápido para la yarda
+    if yb1.button("10", disabled=es_drive, use_container_width=True): 
+        st.session_state.yarda_actual = 10; st.rerun()
+    if yb2.button("20", disabled=es_drive, use_container_width=True): 
+        st.session_state.yarda_actual = 20; st.rerun()
+    if yb3.button("30", disabled=es_drive, use_container_width=True): 
+        st.session_state.yarda_actual = 30; st.rerun()
+    if yb4.button("40", disabled=es_drive, use_container_width=True): 
+        st.session_state.yarda_actual = 40; st.rerun()
+    if yb5.button("50", disabled=es_drive, use_container_width=True): 
+        st.session_state.yarda_actual = 50; st.rerun()
+
+    yarda_val = st.slider("Ajuste Fino (Línea de Golpeo)", min_value=1, max_value=50, value=st.session_state.yarda_actual, disabled=es_drive)
     if not es_drive: st.session_state.yarda_actual = yarda_val
     
     hy1, hy2 = st.columns(2)
@@ -115,7 +129,6 @@ with col_y:
 with col_d:
     st.write("⬇️ **Down**")
     dw1, dw2, dw3, dw4 = st.columns(4)
-    # Botones grandes para el Down en lugar de selector numérico
     if dw1.button("1", type="primary" if st.session_state.down == 1 else "secondary", use_container_width=True, disabled=es_drive):
         st.session_state.down = 1; st.rerun()
     if dw2.button("2", type="primary" if st.session_state.down == 2 else "secondary", use_container_width=True, disabled=es_drive):
@@ -127,7 +140,6 @@ with col_d:
         
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # La distancia se queda abajo de los botones de down
     dist_val = st.number_input("📏 Distancia", min_value=1, value=st.session_state.distancia, disabled=es_drive)
     if not es_drive: st.session_state.distancia = dist_val
 
