@@ -7,18 +7,28 @@ st.set_page_config(page_title="Pumas CU Scout", page_icon="🏈", layout="wide",
 
 st.markdown("""
     <style>
+    /* Estilos generales para botones secundarios */
     div.stButton > button {
         height: 60px;
-        font-size: 20px !important;
+        font-size: 18px !important;
         font-weight: bold;
         border-radius: 10px;
+        background-color: #f0f2f6;
+        color: black;
+        border: 2px solid #dcdcdc;
+    }
+    /* Botones primarios (Seleccionados o Guardar) */
+    div.stButton > button[kind="primary"] {
         background-color: #1F4E78;
         color: white;
+        border: none;
     }
+    /* Botón de descarga */
     div.stDownloadButton > button {
         height: 80px;
         font-size: 20px !important;
         background-color: #2E7D32;
+        color: white;
         border-radius: 12px;
     }
     .stSelectbox label, .stTextInput label, .stNumberInput label, .stRadio label, .stSlider label {
@@ -34,9 +44,8 @@ if 'lista_jugadas' not in st.session_state: st.session_state.lista_jugadas = []
 if 'yarda_actual' not in st.session_state: st.session_state.yarda_actual = 20
 if 'down' not in st.session_state: st.session_state.down = 1
 if 'distancia' not in st.session_state: st.session_state.distancia = 10
-if 'personnel' not in st.session_state: st.session_state.personnel = "10"
-if 'off_form' not in st.session_state: st.session_state.off_form = ""
 if 'msg_exito' not in st.session_state: st.session_state.msg_exito = ""
+if 'resultado' not in st.session_state: st.session_state.resultado = "Pass"
 
 # Listas de Jugadores
 LISTA_QB = ["N/A", "3 - Garza", "10 - Sánchez", "17 - Corona"]
@@ -59,15 +68,14 @@ LISTA_DEFENSA = [
 # --- 3. INTERFAZ GRÁFICA ---
 st.title("🏈 Scout Pumas CU")
 
-# Mostrar mensaje de éxito tras un recargo rápido
 if st.session_state.msg_exito:
     st.success(st.session_state.msg_exito)
     st.session_state.msg_exito = ""
 
-periodo_actual = st.selectbox("⏱️ PERIODO DE PRÁCTICA", ["SKELL OFENSA", "2DO DOWN RUN FIT", "RED ZONE", "TEAM", "OTRO"])
+periodo_actual = st.selectbox("⏱️ PERIODO DE PRÁCTICA", ["SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "TEAM", "OTRO"])
 st.markdown("---")
 
-# --- FILA 1: POSICIÓN Y CONTEXTO (Automático) ---
+# --- FILA 1: POSICIÓN ---
 st.subheader("📍 1. Posición y Contexto")
 col_y, col_d = st.columns([2, 1])
 
@@ -77,7 +85,6 @@ with col_y:
 
 with col_d:
     d_c1, d_c2 = st.columns(2)
-    # Los widgets toman su valor directamente de la memoria, lo que permite el auto-cálculo
     with d_c1:
         down = st.number_input("⬇️ Down", min_value=1, max_value=4, key="down")
     with d_c2:
@@ -85,35 +92,39 @@ with col_d:
 
 st.markdown("---")
 
-# --- FILA 2: RENDERIZADO CONDICIONAL ---
-st.subheader("📋 2. Desarrollo de la Jugada")
+# --- FILA 2: RESULTADO (COMO BOTONES) ---
+st.subheader("🏁 2. Tipo de Jugada")
+r1, r2, r3, r4, r5, r6 = st.columns(6)
 
-# Elegir primero el resultado limpia visualmente la pantalla
-resultado = st.radio("🏁 Resultado (Define qué jugadores se muestran)", 
-                     ["Pass (Pase)", "Rush (Carrera)", "Scramble", "Incompleto", "Sack", "Interception"], 
-                     horizontal=True)
+if r1.button("🏈 Pase", type="primary" if st.session_state.resultado == "Pass" else "secondary", use_container_width=True): 
+    st.session_state.resultado = "Pass"; st.rerun()
+if r2.button("🏃 Carrera", type="primary" if st.session_state.resultado == "Rush" else "secondary", use_container_width=True): 
+    st.session_state.resultado = "Rush"; st.rerun()
+if r3.button("🏃‍♂️ Scramble", type="primary" if st.session_state.resultado == "Scramble" else "secondary", use_container_width=True): 
+    st.session_state.resultado = "Scramble"; st.rerun()
+if r4.button("❌ Incompleto", type="primary" if st.session_state.resultado == "Incompleto" else "secondary", use_container_width=True): 
+    st.session_state.resultado = "Incompleto"; st.rerun()
+if r5.button("💥 Sack", type="primary" if st.session_state.resultado == "Sack" else "secondary", use_container_width=True): 
+    st.session_state.resultado = "Sack"; st.rerun()
+if r6.button("🦅 INT", type="primary" if st.session_state.resultado == "Interception" else "secondary", use_container_width=True): 
+    st.session_state.resultado = "Interception"; st.rerun()
+
+st.markdown("---")
+
+# --- FILA 3: JUGADORES (Sin Formación/Personal) ---
+st.subheader("👥 3. Jugadores Involucrados")
 
 col_ofensa, col_defensa = st.columns(2)
 passer, runner, receiver = "N/A", "N/A", "N/A"
 
 with col_ofensa:
-    # Memoria persistente para Formación y Personal
-    o_c1, o_c2 = st.columns(2)
-    with o_c1:
-        personnel = st.selectbox("👥 Personal", ["10", "11", "12", "20", "21", "22", "Otro"], key="personnel")
-    with o_c2:
-        off_form = st.text_input("📝 Formación", key="off_form")
-        
-    off_play = st.text_input("🏃 Jugada")
-    
-    st.write("🏈 **Involucrados**")
-    # LÓGICA DE CONDICIONALES: Oculta a los jugadores que no participan en el tipo de jugada
-    if resultado in ["Pass (Pase)", "Incompleto", "Interception"]:
+    st.write("🏈 **Ofensiva**")
+    if st.session_state.resultado in ["Pass", "Incompleto", "Interception"]:
         passer = st.selectbox("🎯 QB", PASADORES)
         receiver = st.selectbox("👐 Receptor", RECEPTORES)
-    elif resultado == "Rush (Carrera)":
+    elif st.session_state.resultado == "Rush":
         runner = st.selectbox("💨 Corredor", CORREDORES)
-    elif resultado in ["Scramble", "Sack"]:
+    elif st.session_state.resultado in ["Scramble", "Sack"]:
         passer = st.selectbox("🎯 QB", PASADORES)
 
 with col_defensa:
@@ -123,41 +134,39 @@ with col_defensa:
 
 st.markdown("---")
 
-# --- FILA 3: BOTONES DE GUARDADO RÁPIDO Y CÁLCULO ---
-st.subheader("⚡ 3. Guardado Rápido")
-st.write("Toca un botón para registrar la yarda ganada y avanzar al siguiente Down automáticamente.")
+# --- FILA 4: GUARDADO RÁPIDO ---
+st.subheader("⚡ 4. Guardado Rápido")
+st.write("Toca un botón para registrar la yarda ganada y guardar la jugada al instante.")
 
-# Variables para procesar la jugada
 ganancia_final = None
 
 b1, b2, b3, b4, b5 = st.columns(5)
-if b1.button("Incompleto (0)", use_container_width=True): ganancia_final = 0
-if b2.button("+3 Yds", use_container_width=True): ganancia_final = 3
-if b3.button("+5 Yds", use_container_width=True): ganancia_final = 5
-if b4.button("1er Down (+10)", use_container_width=True): ganancia_final = 10
+if b1.button("0 Yds", use_container_width=True, type="primary"): ganancia_final = 0
+if b2.button("+3 Yds", use_container_width=True, type="primary"): ganancia_final = 3
+if b3.button("+5 Yds", use_container_width=True, type="primary"): ganancia_final = 5
+# Auto-calcula lo necesario para el 1er down
+if b4.button(f"1er Down (+{st.session_state.distancia})", use_container_width=True, type="primary"): ganancia_final = st.session_state.distancia
 
 ganancia_manual = st.number_input("O ingresa yardas manual (Usa '-' para capturas):", value=0, step=1)
-if b5.button("✅ Guardar Manual", use_container_width=True):
+if b5.button("✅ Guardar Manual", use_container_width=True, type="primary"):
     ganancia_final = ganancia_manual
 
-# --- MOTOR LÓGICO DE LA APLICACIÓN ---
+# --- MOTOR LÓGICO DE GUARDADO ---
 if ganancia_final is not None:
-    # 1. Reglas forzadas según el resultado
-    if resultado == "Incompleto": ganancia_final = 0
-    if resultado == "Sack" and ganancia_final > 0: ganancia_final = -ganancia_final # Forzar negativo
+    if st.session_state.resultado == "Incompleto": ganancia_final = 0
+    if st.session_state.resultado == "Sack" and ganancia_final > 0: ganancia_final = -ganancia_final 
     
-    # 2. Registrar la jugada
     nueva_jugada = {
         "TITLE": periodo_actual,  
         "PLAY #": len(st.session_state.lista_jugadas) + 1,
-        "PERSONNEL": st.session_state.personnel,
+        "PERSONNEL": "", # Mantenemos la columna en blanco para que Hudl no rompa el CSV
         "HASH": hash_mark,
         "YARD LN": st.session_state.yarda_actual, 
         "DN": st.session_state.down,               
         "DIST": st.session_state.distancia,        
-        "OFF FORM": st.session_state.off_form,
-        "OFF PLAY": off_play,
-        "RESULT": resultado.split(" ")[0], 
+        "OFF FORM": "",
+        "OFF PLAY": "",
+        "RESULT": st.session_state.resultado, 
         "GAIN/LS": ganancia_final,
         "RUNNER": runner.split(" - ")[0] if runner != "N/A" else "",
         "RECEIVER": receiver.split(" - ")[0] if receiver != "N/A" else "",
@@ -167,8 +176,7 @@ if ganancia_final is not None:
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
-    # 3. Calcular el próximo Down y Distancia
-    if resultado == "Interception":
+    if st.session_state.resultado == "Interception":
         st.session_state.down = 1
         st.session_state.distancia = 10
     else:
@@ -178,16 +186,14 @@ if ganancia_final is not None:
         else:
             st.session_state.down += 1
             st.session_state.distancia -= ganancia_final
-            # Si superó el 4to down, se resetea la serie
             if st.session_state.down > 4:
                 st.session_state.down = 1
                 st.session_state.distancia = 10
                 
-    # 4. Mensaje y Recarga instantánea
     st.session_state.msg_exito = f"¡Jugada {len(st.session_state.lista_jugadas)} guardada! Avance: {ganancia_final} yds."
-    st.rerun() # Esto refresca la pantalla para mostrar el nuevo Down calculado
+    st.rerun() 
 
-st.markdown("<br><br><br>", unsafe_allow_html=True) # Espacio en blanco al final
+st.markdown("<br><br>", unsafe_allow_html=True) 
 
 # --- SECCIÓN DE CIERRE ---
 st.markdown("---")
@@ -207,4 +213,4 @@ if st.session_state.lista_jugadas:
             df_jugadas.to_excel(writer, index=False, sheet_name='Practica')
         st.download_button("📊 Descargar Tabla Excel", data=excel_buffer.getvalue(), file_name='reporte.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
 else:
-    st.warning("No hay jugadas registradas en esta sesión. Comienza a registrar arriba para habilitar las descargas.")
+    st.warning("No hay jugadas registradas en esta sesión.")
