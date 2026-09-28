@@ -55,9 +55,12 @@ if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual
 LISTA_QB = ["N/A", "3 - Garza", "10 - Sánchez", "17 - Corona"]
 LISTA_RB = ["N/A", "23 - Pérez", "26 - Schrader", "32 - Báez", "34 - Melo", "35 - Santillán", "44 - Hernández"]
 LISTA_WR = ["N/A", "1 - Blanco", "12 - Cardona", "13 - Vivas", "14 - Medrano", "18 - Ponce", "81 - Román", "82 - Reyes", "83 - Reyes", "84 - Granados", "88 - Villafuerte", "98 - Miranda"]
+LISTA_DL = ["0 - Morrison", "9 - Carriles", "11 - Liceá", "91 - Martínez", "92 - Bautista", "94 - Soriano", "95 - Bautista", "99 - Valdéz"]
+
 PASADORES = LISTA_QB
 CORREDORES = LISTA_RB + LISTA_WR[1:] + LISTA_QB[1:] 
-RECEPTORES = LISTA_WR + LISTA_RB[1:] 
+# Se agregó la DL ofensiva al final de los receptores
+RECEPTORES = LISTA_WR + LISTA_RB[1:] + LISTA_DL
 
 LISTA_DEFENSA = [
     "N/A", "0 - Morrison", "2 - Soriano", "4 - Mercado", "6 - González", "7 - Bañuelos", 
@@ -103,7 +106,6 @@ with col_y:
         
     st.write("🎯 **Yarda Rápida**")
     yb1, yb2, yb3, yb4, yb5 = st.columns(5)
-    # Botones de acceso rápido para la yarda
     if yb1.button("10", disabled=es_drive, use_container_width=True): 
         st.session_state.yarda_actual = 10; st.rerun()
     if yb2.button("20", disabled=es_drive, use_container_width=True): 
