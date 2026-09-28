@@ -53,23 +53,31 @@ if 'msg_exito' not in st.session_state: st.session_state.msg_exito = ""
 if 'resultado' not in st.session_state: st.session_state.resultado = "Pass"
 if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual = "Alberca"
 
+# --- LISTAS DEL ROSTER OFICIAL LIGA MAYOR ---
 LISTA_QB = ["N/A", "3 - Garza", "10 - Sánchez", "17 - Corona"]
 LISTA_RB = ["N/A", "23 - Pérez", "26 - Schrader", "32 - Báez", "34 - Melo", "35 - Santillán", "44 - Hernández"]
 LISTA_WR = ["N/A", "1 - Blanco", "12 - Cardona", "13 - Vivas", "14 - Medrano", "18 - Ponce", "81 - Román", "82 - Reyes", "83 - Reyes", "84 - Granados", "88 - Villafuerte", "98 - Miranda"]
 LISTA_DL = ["0 - Morrison", "9 - Carriles", "11 - Liceá", "91 - Martínez", "92 - Bautista", "94 - Soriano", "95 - Bautista", "99 - Valdéz"]
+LISTA_OL = ["51 - Nogueda", "53 - Hernández", "54 - Barrientos", "58 - Corona", "68 - Puente", "70 - Aparicio", "71 - Brito", "72 - Trejo", "73 - Inzunza", "74 - Romero", "76 - Sánchez", "77 - Fernández", "89 - Núñez"]
+LISTA_PB_K = ["5 - Hernández", "25 - Cerda", "80 - Mariano", "87 - Zamora"]
 
-PASADORES = LISTA_QB
-CORREDORES = LISTA_RB + LISTA_WR[1:] + LISTA_QB[1:] 
-RECEPTORES = LISTA_WR + LISTA_RB[1:] + LISTA_DL
+# Filtro para no duplicar el "N/A" al sumar listas
+WR_LIMPIO = [x for x in LISTA_WR if x != "N/A"]
+RB_LIMPIO = [x for x in LISTA_RB if x != "N/A"]
+QB_LIMPIO = [x for x in LISTA_QB if x != "N/A"]
+
+PASADORES = LISTA_QB + LISTA_PB_K + WR_LIMPIO + RB_LIMPIO
+CORREDORES = LISTA_RB + WR_LIMPIO + QB_LIMPIO + LISTA_PB_K
+RECEPTORES = LISTA_WR + RB_LIMPIO + LISTA_DL + LISTA_PB_K + LISTA_OL
 
 LISTA_DEFENSA = [
-    "N/A", "0 - Morrison", "2 - Soriano", "4 - Mercado", "6 - González", "7 - Bañuelos", 
-    "8 - Higelin", "9 - Carriles", "11 - Liceá", "15 - Álvarez", "16 - Aguilar", 
-    "19 - Velasco", "21 - Moreno", "22 - Acosta", "24 - Ceballos", "27 - Villegas", 
-    "28 - Cervantes", "29 - Juárez", "30 - Cabrera", "31 - Arreola", "33 - Bañuelos", 
-    "39 - Saldaña", "40 - Ocampo", "42 - Trejo", "43 - Rodríguez", "52 - Contreras", 
-    "59 - González", "90 - Saavedra", "91 - Martínez", "92 - Bautista", "94 - Soriano", 
-    "95 - Bautista", "99 - Valdéz"
+    "N/A", "0 - Morrison", "2 - Soriano", "4 - Mercado", "5 - Hernández", "6 - González", 
+    "7 - Bañuelos", "8 - Higelin", "9 - Carriles", "11 - Liceá", "15 - Álvarez", 
+    "16 - Aguilar", "19 - Velasco", "21 - Moreno", "22 - Acosta", "24 - Ceballos", 
+    "25 - Cerda", "27 - Villegas", "28 - Cervantes", "29 - Juárez", "30 - Cabrera", 
+    "31 - Arreola", "33 - Bañuelos", "39 - Saldaña", "40 - Ocampo", "42 - Trejo", 
+    "43 - Rodríguez", "52 - Contreras", "59 - González", "80 - Mariano", "87 - Zamora", 
+    "90 - Saavedra", "91 - Martínez", "92 - Bautista", "94 - Soriano", "95 - Bautista", "99 - Valdéz"
 ]
 
 # --- 3. INTERFAZ GRÁFICA ---
@@ -279,7 +287,6 @@ if st.session_state.lista_jugadas:
     st.info(f"Has registrado un total de {len(st.session_state.lista_jugadas)} jugadas en esta sesión.")
     df_jugadas = pd.DataFrame(st.session_state.lista_jugadas)
     
-    # --- LÓGICA PARA NOMBRES DE ARCHIVO DINÁMICOS ---
     fecha_hoy = datetime.now().strftime("%Y-%m-%d")
     nombre_practica_limpio = periodo_actual.replace(" ", "_")
     nombre_csv = f"PumasCU_{nombre_practica_limpio}_{fecha_hoy}.csv"
