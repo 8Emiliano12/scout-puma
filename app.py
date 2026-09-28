@@ -1,59 +1,100 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import io
 from datetime import datetime
 
-# --- 1. CONFIGURACIÓN Y ESTILOS ---
+# --- 1. CONFIGURACIÓN Y ESTILOS DE MÁXIMA COMPACTACIÓN ---
 st.set_page_config(page_title="Pumas CU Scout", page_icon="🏈", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
+    /* Eliminar márgenes para aprovechar el 100% de la pantalla del iPad */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 100% !important;
+    }
+    header {visibility: hidden;} /* Oculta la barra superior de Streamlit */
+    #MainMenu {visibility: hidden;} 
+    footer {visibility: hidden;}
+    
+    /* Botones compactos y ágiles */
     div.stButton > button {
-        height: 60px;
-        font-size: 18px !important;
+        height: 50px; /* Un poco más delgados para que quepa todo */
+        font-size: 16px !important;
         font-weight: bold;
-        border-radius: 10px;
+        border-radius: 8px;
         background-color: #f0f2f6;
         color: black;
         border: 2px solid #dcdcdc;
+        padding: 0px !important;
     }
     div.stButton > button[kind="primary"] {
         background-color: #1F4E78;
         color: white;
         border: none;
     }
-    div.stDownloadButton > button {
-        height: 80px;
-        font-size: 20px !important;
-        background-color: #2E7D32;
-        color: white;
-        border-radius: 12px;
+    /* Botones de guardado más llamativos */
+    .btn-guardar > div > button {
+        background-color: #2E7D32 !important;
+        color: white !important;
+        border: none !important;
     }
-    .stSelectbox label, .stTextInput label, .stNumberInput label, .stRadio label, .stSlider label, .stCheckbox label {
-        font-size: 18px !important;
+    .stSelectbox label, .stTextInput label, .stNumberInput label, .stSlider label {
+        font-size: 16px !important;
         font-weight: 800;
         color: #1a1a1a;
+        margin-bottom: 0px !important;
     }
-    /* Estilo para hacer el número de jugada más visible */
+    /* Número de jugada gigante en la esquina */
     [data-testid="stMetricValue"] {
-        font-size: 40px !important;
+        font-size: 45px !important;
         color: #1F4E78;
+        line-height: 1 !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 16px !important;
+        font-weight: bold;
     }
     </style>
 """, unsafe_allow_html=True)
+
+# --- 1.5 SCRIPT PARA BLOQUEAR EL TECLADO VIRTUAL EN TABLETS ---
+components.html(
+    """
+    <script>
+    const doc = window.parent.document;
+    function disableKeyboard() {
+        const inputs = doc.querySelectorAll('div[data-baseweb="select"] input');
+        inputs.forEach(inp => {
+            inp.setAttribute('inputmode', 'none');
+            inp.setAttribute('autocomplete', 'off'); 
+        });
+    }
+    disableKeyboard();
+    setInterval(disableKeyboard, 500);
+    </script>
+    """,
+    height=0,
+    width=0
+)
 
 # --- 2. INICIALIZACIÓN DE MEMORIA ---
 if 'lista_jugadas' not in st.session_state: st.session_state.lista_jugadas = []
 if 'yarda_actual' not in st.session_state: st.session_state.yarda_actual = 20
 if 'territorio' not in st.session_state: st.session_state.territorio = "Propio"
-if 'modo_avance' not in st.session_state: st.session_state.modo_avance = "🏈 Drive (Avanza)"
+if 'modo_avance' not in st.session_state: st.session_state.modo_avance = "🏈 Drive"
 if 'down' not in st.session_state: st.session_state.down = 1
 if 'distancia' not in st.session_state: st.session_state.distancia = 10
 if 'msg_exito' not in st.session_state: st.session_state.msg_exito = ""
 if 'resultado' not in st.session_state: st.session_state.resultado = "Pass"
 if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual = "Alberca"
+if 'hash_mark' not in st.session_state: st.session_state.hash_mark = "M"
 
-# --- LISTAS DEL ROSTER OFICIAL LIGA MAYOR ---
+# --- LISTAS DEL ROSTER ---
 LISTA_QB = ["N/A", "3 - Garza", "10 - Sánchez", "17 - Corona"]
 LISTA_RB = ["N/A", "23 - Pérez", "26 - Schrader", "32 - Báez", "34 - Melo", "35 - Santillán", "44 - Hernández"]
 LISTA_WR = ["N/A", "1 - Blanco", "12 - Cardona", "13 - Vivas", "14 - Medrano", "18 - Ponce", "81 - Román", "82 - Reyes", "83 - Reyes", "84 - Granados", "88 - Villafuerte", "98 - Miranda"]
@@ -61,7 +102,6 @@ LISTA_DL = ["0 - Morrison", "9 - Carriles", "11 - Liceá", "91 - Martínez", "92
 LISTA_OL = ["51 - Nogueda", "53 - Hernández", "54 - Barrientos", "58 - Corona", "68 - Puente", "70 - Aparicio", "71 - Brito", "72 - Trejo", "73 - Inzunza", "74 - Romero", "76 - Sánchez", "77 - Fernández", "89 - Núñez"]
 LISTA_PB_K = ["5 - Hernández", "25 - Cerda", "80 - Mariano", "87 - Zamora"]
 
-# Filtro para no duplicar el "N/A" al sumar listas
 WR_LIMPIO = [x for x in LISTA_WR if x != "N/A"]
 RB_LIMPIO = [x for x in LISTA_RB if x != "N/A"]
 QB_LIMPIO = [x for x in LISTA_QB if x != "N/A"]
@@ -80,141 +120,128 @@ LISTA_DEFENSA = [
     "90 - Saavedra", "91 - Martínez", "92 - Bautista", "94 - Soriano", "95 - Bautista", "99 - Valdéz"
 ]
 
-# --- 3. INTERFAZ GRÁFICA ---
-col_tit, col_num = st.columns([3, 1])
+# --- 3. HEADER COMPACTO ---
+col_tit, col_per, col_num = st.columns([1.5, 2, 0.5])
 with col_tit:
-    st.title("🏈 Scout Pumas CU")
+    st.markdown("<h2 style='margin-top:-20px;'>🏈 Pumas CU Scout</h2>", unsafe_allow_html=True)
+with col_per:
+    periodo_actual = st.selectbox("⏱️ PERIODO", ["TEAM", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"], label_visibility="collapsed")
 with col_num:
-    st.metric("Jugada Actual", len(st.session_state.lista_jugadas) + 1)
+    st.metric("JUGADA", len(st.session_state.lista_jugadas) + 1)
 
 if st.session_state.msg_exito:
     st.success(st.session_state.msg_exito)
     st.session_state.msg_exito = ""
 
-periodo_actual = st.selectbox("⏱️ PERIODO DE PRÁCTICA", ["SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "TEAM", "OTRO"])
 st.markdown("---")
 
-# --- FILA 1: POSICIÓN Y MODO DE AVANCE ---
-st.subheader("📍 1. Posición del Balón")
-col_y, col_d = st.columns([2, 1])
+# --- 4. DISEÑO DE 3 COLUMNAS PARA CERO SCROLL ---
+col_izq, col_cen, col_der = st.columns([1.2, 1.3, 1])
 
-with col_y:
+# ==========================================
+# COLUMNA IZQUIERDA: CONTEXTO DEL CAMPO
+# ==========================================
+with col_izq:
+    st.markdown("#### 📍 Contexto")
+    
     t1, t2 = st.columns(2)
-    with t1:
-        modo_idx = 0 if st.session_state.modo_avance == "📍 Fijo (Estático)" else 1
-        modo_val = st.radio("Modo de Serie", ["📍 Fijo (Estático)", "🏈 Drive (Avanza)"], horizontal=True, index=modo_idx)
-        st.session_state.modo_avance = modo_val
-    
-    es_drive = (st.session_state.modo_avance == "🏈 Drive (Avanza)")
-    
-    with t2:
-        terr_idx = 0 if st.session_state.territorio == "Propio" else 1
-        terr_val = st.radio("Territorio", ["Propio", "Rival"], horizontal=True, index=terr_idx, disabled=es_drive)
-        if not es_drive: st.session_state.territorio = terr_val
+    if t1.button("📍 Fijo", type="primary" if st.session_state.modo_avance == "📍 Fijo" else "secondary", use_container_width=True):
+        st.session_state.modo_avance = "📍 Fijo"; st.rerun()
+    if t2.button("🏈 Drive", type="primary" if st.session_state.modo_avance == "🏈 Drive" else "secondary", use_container_width=True):
+        st.session_state.modo_avance = "🏈 Drive"; st.rerun()
         
-    st.write("🎯 **Yarda Rápida**")
+    es_drive = (st.session_state.modo_avance == "🏈 Drive")
+    
+    t3, t4 = st.columns(2)
+    if t3.button("Propio", type="primary" if st.session_state.territorio == "Propio" else "secondary", use_container_width=True, disabled=es_drive):
+        st.session_state.territorio = "Propio"; st.rerun()
+    if t4.button("Rival", type="primary" if st.session_state.territorio == "Rival" else "secondary", use_container_width=True, disabled=es_drive):
+        st.session_state.territorio = "Rival"; st.rerun()
+        
     yb1, yb2, yb3, yb4, yb5 = st.columns(5)
-    if yb1.button("10", disabled=es_drive, use_container_width=True): 
-        st.session_state.yarda_actual = 10; st.rerun()
-    if yb2.button("20", disabled=es_drive, use_container_width=True): 
-        st.session_state.yarda_actual = 20; st.rerun()
-    if yb3.button("30", disabled=es_drive, use_container_width=True): 
-        st.session_state.yarda_actual = 30; st.rerun()
-    if yb4.button("40", disabled=es_drive, use_container_width=True): 
-        st.session_state.yarda_actual = 40; st.rerun()
-    if yb5.button("50", disabled=es_drive, use_container_width=True): 
-        st.session_state.yarda_actual = 50; st.rerun()
+    if yb1.button("10", disabled=es_drive, use_container_width=True): st.session_state.yarda_actual = 10; st.rerun()
+    if yb2.button("20", disabled=es_drive, use_container_width=True): st.session_state.yarda_actual = 20; st.rerun()
+    if yb3.button("30", disabled=es_drive, use_container_width=True): st.session_state.yarda_actual = 30; st.rerun()
+    if yb4.button("40", disabled=es_drive, use_container_width=True): st.session_state.yarda_actual = 40; st.rerun()
+    if yb5.button("50", disabled=es_drive, use_container_width=True): st.session_state.yarda_actual = 50; st.rerun()
 
-    yarda_val = st.slider("Ajuste Fino (Línea de Golpeo)", min_value=1, max_value=50, value=st.session_state.yarda_actual, disabled=es_drive)
-    if not es_drive: st.session_state.yarda_actual = yarda_val
+    st.session_state.yarda_actual = st.slider("Yarda exacta", min_value=1, max_value=50, value=st.session_state.yarda_actual, disabled=es_drive, label_visibility="collapsed")
     
-    hy1, hy2 = st.columns(2)
-    with hy1:
-        hash_mark = st.radio("➖ Hash", ["L (Izquierdo)", "M (Centro)", "R (Derecho)"], horizontal=True)
-    with hy2:
-        dir_idx = 0 if st.session_state.direccion_actual == "Alberca" else 1
-        dir_val = st.radio("🧭 Atacando hacia:", ["Alberca", "Canchas"], horizontal=True, index=dir_idx)
-        st.session_state.direccion_actual = dir_val
-
-with col_d:
-    st.write("⬇️ **Down**")
     dw1, dw2, dw3, dw4 = st.columns(4)
-    if dw1.button("1", type="primary" if st.session_state.down == 1 else "secondary", use_container_width=True, disabled=es_drive):
-        st.session_state.down = 1; st.rerun()
-    if dw2.button("2", type="primary" if st.session_state.down == 2 else "secondary", use_container_width=True, disabled=es_drive):
-        st.session_state.down = 2; st.rerun()
-    if dw3.button("3", type="primary" if st.session_state.down == 3 else "secondary", use_container_width=True, disabled=es_drive):
-        st.session_state.down = 3; st.rerun()
-    if dw4.button("4", type="primary" if st.session_state.down == 4 else "secondary", use_container_width=True, disabled=es_drive):
-        st.session_state.down = 4; st.rerun()
-        
-    st.markdown("<br>", unsafe_allow_html=True)
+    if dw1.button("1D", type="primary" if st.session_state.down == 1 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 1; st.rerun()
+    if dw2.button("2D", type="primary" if st.session_state.down == 2 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 2; st.rerun()
+    if dw3.button("3D", type="primary" if st.session_state.down == 3 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 3; st.rerun()
+    if dw4.button("4D", type="primary" if st.session_state.down == 4 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 4; st.rerun()
     
-    dist_val = st.number_input("📏 Distancia", min_value=1, value=st.session_state.distancia, disabled=es_drive)
+    dist_val = st.number_input("Distancia", min_value=1, value=st.session_state.distancia, disabled=es_drive)
     if not es_drive: st.session_state.distancia = dist_val
 
-st.markdown("---")
+    h1, h2, h3, h4, h5 = st.columns([1,1,1, 1.2,1.2])
+    if h1.button("L", type="primary" if st.session_state.hash_mark == "L" else "secondary", use_container_width=True): st.session_state.hash_mark = "L"; st.rerun()
+    if h2.button("M", type="primary" if st.session_state.hash_mark == "M" else "secondary", use_container_width=True): st.session_state.hash_mark = "M"; st.rerun()
+    if h3.button("R", type="primary" if st.session_state.hash_mark == "R" else "secondary", use_container_width=True): st.session_state.hash_mark = "R"; st.rerun()
+    if h4.button("Alberca", type="primary" if st.session_state.direccion_actual == "Alberca" else "secondary", use_container_width=True): st.session_state.direccion_actual = "Alberca"; st.rerun()
+    if h5.button("Canchas", type="primary" if st.session_state.direccion_actual == "Canchas" else "secondary", use_container_width=True): st.session_state.direccion_actual = "Canchas"; st.rerun()
 
-# --- FILA 2: RESULTADO ---
-st.subheader("🏁 2. Tipo de Jugada")
-r1, r2, r3, r4, r5, r6 = st.columns(6)
-
-if r1.button("🏈 Pase", type="primary" if st.session_state.resultado == "Pass" else "secondary", use_container_width=True): 
-    st.session_state.resultado = "Pass"; st.rerun()
-if r2.button("🏃 Carrera", type="primary" if st.session_state.resultado == "Rush" else "secondary", use_container_width=True): 
-    st.session_state.resultado = "Rush"; st.rerun()
-if r3.button("🏃‍♂️ Scramble", type="primary" if st.session_state.resultado == "Scramble" else "secondary", use_container_width=True): 
-    st.session_state.resultado = "Scramble"; st.rerun()
-if r4.button("❌ Incompleto", type="primary" if st.session_state.resultado == "Incompleto" else "secondary", use_container_width=True): 
-    st.session_state.resultado = "Incompleto"; st.rerun()
-if r5.button("💥 Sack", type="primary" if st.session_state.resultado == "Sack" else "secondary", use_container_width=True): 
-    st.session_state.resultado = "Sack"; st.rerun()
-if r6.button("🦅 INT", type="primary" if st.session_state.resultado == "Interception" else "secondary", use_container_width=True): 
-    st.session_state.resultado = "Interception"; st.rerun()
-
-st.markdown("---")
-
-# --- FILA 3: JUGADORES ---
-st.subheader("👥 3. Jugadores Involucrados")
-
-col_ofensa, col_defensa = st.columns(2)
-passer, runner, receiver = "N/A", "N/A", "N/A"
-
-with col_ofensa:
-    st.write("🏈 **Ofensiva**")
+# ==========================================
+# COLUMNA CENTRAL: JUGADA Y JUGADORES
+# ==========================================
+with col_cen:
+    st.markdown("#### 🏁 Desarrollo")
+    
+    # Cuadrícula 2x3 para ahorrar espacio vertical
+    r1, r2 = st.columns(2)
+    with r1:
+        if st.button("🏈 Pase", type="primary" if st.session_state.resultado == "Pass" else "secondary", use_container_width=True): st.session_state.resultado = "Pass"; st.rerun()
+        if st.button("🏃‍♂️ Scramble", type="primary" if st.session_state.resultado == "Scramble" else "secondary", use_container_width=True): st.session_state.resultado = "Scramble"; st.rerun()
+        if st.button("💥 Sack", type="primary" if st.session_state.resultado == "Sack" else "secondary", use_container_width=True): st.session_state.resultado = "Sack"; st.rerun()
+    with r2:
+        if st.button("🏃 Carrera", type="primary" if st.session_state.resultado == "Rush" else "secondary", use_container_width=True): st.session_state.resultado = "Rush"; st.rerun()
+        if st.button("❌ Incompleto", type="primary" if st.session_state.resultado == "Incompleto" else "secondary", use_container_width=True): st.session_state.resultado = "Incompleto"; st.rerun()
+        if st.button("🦅 INT", type="primary" if st.session_state.resultado == "Interception" else "secondary", use_container_width=True): st.session_state.resultado = "Interception"; st.rerun()
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    passer, runner, receiver = "N/A", "N/A", "N/A"
+    
     if st.session_state.resultado in ["Pass", "Incompleto", "Interception"]:
         passer = st.selectbox("🎯 QB", PASADORES)
         receiver = st.selectbox("👐 Receptor", RECEPTORES)
     elif st.session_state.resultado == "Rush":
         runner = st.selectbox("💨 Corredor", CORREDORES)
+        st.write("") # Espaciador para mantener altura
     elif st.session_state.resultado in ["Scramble", "Sack"]:
         passer = st.selectbox("🎯 QB", PASADORES)
+        st.write("")
 
-with col_defensa:
-    st.write("🛡️ **Defensiva**")
-    defensor_1 = st.selectbox("💥 Tackle / Captura / Pase Def.", LISTA_DEFENSA)
-    defensor_2 = st.selectbox("🤝 Asistencia (Opcional)", LISTA_DEFENSA)
+    defensor_1 = st.selectbox("💥 Tackle / Pase Def.", LISTA_DEFENSA)
 
-st.markdown("---")
+# ==========================================
+# COLUMNA DERECHA: CIERRE Y GUARDADO
+# ==========================================
+with col_der:
+    st.markdown("#### ⚡ Resultado y Guardar")
+    ganancia_final = None
+    distancia_al_td = (100 - st.session_state.yarda_actual) if st.session_state.territorio == "Propio" else st.session_state.yarda_actual
 
-# --- FILA 4: GUARDADO RÁPIDO Y TOUCHDOWN ---
-st.subheader("⚡ 4. Ganancia y Guardado")
+    # Botones principales gigantes con clase CSS para destacarlos
+    st.markdown('<div class="btn-guardar">', unsafe_allow_html=True)
+    if st.button("❌ 0 Yds (Incompleto/Línea)", use_container_width=True): ganancia_final = 0
+    if st.button("➕ +3 Yds", use_container_width=True): ganancia_final = 3
+    if st.button("➕ +5 Yds", use_container_width=True): ganancia_final = 5
+    if st.button(f"🚀 1er Down (+{st.session_state.distancia})", use_container_width=True): ganancia_final = st.session_state.distancia
+    if st.button("🔥 TOUCHDOWN", use_container_width=True): ganancia_final = distancia_al_td
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    c_m1, c_m2 = st.columns([1, 1.5])
+    with c_m1:
+        ganancia_manual = st.number_input("Manual", value=0, step=1, label_visibility="collapsed")
+    with c_m2:
+        if st.button("✅ Guardar", use_container_width=True, type="primary"):
+            ganancia_final = ganancia_manual
 
-ganancia_final = None
-distancia_al_td = (100 - st.session_state.yarda_actual) if st.session_state.territorio == "Propio" else st.session_state.yarda_actual
-
-b1, b2, b3, b4, b5 = st.columns(5)
-if b1.button("0 Yds", use_container_width=True, type="primary"): ganancia_final = 0
-if b2.button("+3 Yds", use_container_width=True, type="primary"): ganancia_final = 3
-if b3.button("+5 Yds", use_container_width=True, type="primary"): ganancia_final = 5
-if b4.button(f"1er Down (+{st.session_state.distancia})", use_container_width=True, type="primary"): ganancia_final = st.session_state.distancia
-if b5.button("🔥 TOUCHDOWN", use_container_width=True, type="primary"): ganancia_final = distancia_al_td
-
-ganancia_manual = st.number_input("O ingresa yardas manual (Usa '-' para capturas):", value=0, step=1)
-if st.button("✅ Guardar Manual", use_container_width=True, type="primary"):
-    ganancia_final = ganancia_manual
-
-# --- MOTOR LÓGICO Y MATEMÁTICO ---
+# --- MOTOR LÓGICO Y MATEMÁTICO (Oculto de la UI) ---
 if ganancia_final is not None:
     if st.session_state.resultado == "Incompleto": ganancia_final = 0
     if st.session_state.resultado == "Sack" and ganancia_final > 0: ganancia_final = -ganancia_final 
@@ -231,7 +258,7 @@ if ganancia_final is not None:
         "TITLE": periodo_actual,  
         "PLAY #": len(st.session_state.lista_jugadas) + 1,
         "DIRECTION": st.session_state.direccion_actual, 
-        "HASH": hash_mark[0], 
+        "HASH": st.session_state.hash_mark, 
         "YARD LN": yard_str, 
         "DN": st.session_state.down,               
         "DIST": st.session_state.distancia,        
@@ -241,11 +268,11 @@ if ganancia_final is not None:
         "RECEIVER": receiver.split(" - ")[0] if receiver != "N/A" else "",
         "PASSER": passer.split(" - ")[0] if passer != "N/A" else "",
         "TACKLER 1": defensor_1.split(" - ")[0] if defensor_1 != "N/A" else "",
-        "TACKLER 2": defensor_2.split(" - ")[0] if defensor_2 != "N/A" else ""
+        "TACKLER 2": "" # Quitamos el 2do tackle para ahorrar espacio en pantalla, pero la columna sigue en el CSV
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
-    if st.session_state.modo_avance == "🏈 Drive (Avanza)":
+    if st.session_state.modo_avance == "🏈 Drive":
         if st.session_state.resultado == "Interception" or is_td:
             st.session_state.down = 1
             st.session_state.distancia = 10
@@ -274,38 +301,28 @@ if ganancia_final is not None:
                 st.session_state.territorio = "Rival"
                 st.session_state.yarda_actual = 100 - new_abs
                 
-    st.session_state.msg_exito = f"¡Jugada {len(st.session_state.lista_jugadas)} guardada en modo {st.session_state.modo_avance.split(' ')[1]}! Avance: {ganancia_final} yds. {'🔥 TOUCHDOWN' if is_td else ''}"
+    st.session_state.msg_exito = f"¡Jugada {len(st.session_state.lista_jugadas)} guardada! Avance: {ganancia_final} yds."
     st.rerun() 
 
-st.markdown("<br><br>", unsafe_allow_html=True) 
-
-# --- SECCIÓN DE CIERRE ---
 st.markdown("---")
-st.header("🏁 Terminar Entrenamiento")
 
+# --- DESCARGAS (Ocultas hasta que haya jugadas para ahorrar espacio visual) ---
 if st.session_state.lista_jugadas:
-    st.info(f"Has registrado un total de {len(st.session_state.lista_jugadas)} jugadas en esta sesión.")
-    df_jugadas = pd.DataFrame(st.session_state.lista_jugadas)
-    
-    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-    nombre_practica_limpio = periodo_actual.replace(" ", "_")
-    nombre_csv = f"PumasCU_{nombre_practica_limpio}_{fecha_hoy}.csv"
-    nombre_excel = f"PumasCU_{nombre_practica_limpio}_{fecha_hoy}.xlsx"
-    
-    c_csv, c_excel = st.columns(2)
-    with c_csv:
-        csv_data = df_jugadas.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Descargar CSV para Hudl", data=csv_data, file_name=nombre_csv, mime='text/csv', use_container_width=True)
-    with c_excel:
-        excel_buffer = io.BytesIO()
-        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-            df_jugadas.to_excel(writer, index=False, sheet_name='Practica')
-        st.download_button("📊 Descargar Tabla Excel", data=excel_buffer.getvalue(), file_name=nombre_excel, mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🗑️ Iniciar Nueva Práctica (Borrar Datos)", use_container_width=True):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
-else:
-    st.warning("No hay jugadas registradas en esta sesión.")
+    with st.expander("📥 Exportar Práctica o Borrar Sesión", expanded=False):
+        df_jugadas = pd.DataFrame(st.session_state.lista_jugadas)
+        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+        nombre_practica = periodo_actual.replace(" ", "_")
+        
+        c_csv, c_excel, c_del = st.columns(3)
+        with c_csv:
+            csv_data = df_jugadas.to_csv(index=False).encode('utf-8')
+            st.download_button("Descargar CSV (Hudl)", data=csv_data, file_name=f"PumasCU_{nombre_practica}_{fecha_hoy}.csv", mime='text/csv', use_container_width=True)
+        with c_excel:
+            excel_buffer = io.BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                df_jugadas.to_excel(writer, index=False, sheet_name='Practica')
+            st.download_button("Descargar Excel", data=excel_buffer.getvalue(), file_name=f"PumasCU_{nombre_practica}_{fecha_hoy}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+        with c_del:
+            if st.button("🗑️ Borrar Práctica", use_container_width=True):
+                for key in list(st.session_state.keys()): del st.session_state[key]
+                st.rerun()
