@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+from datetime import datetime
 
 # --- 1. CONFIGURACIÓN Y ESTILOS ---
 st.set_page_config(page_title="Pumas CU Scout", page_icon="🏈", layout="wide", initial_sidebar_state="collapsed")
@@ -59,7 +60,6 @@ LISTA_DL = ["0 - Morrison", "9 - Carriles", "11 - Liceá", "91 - Martínez", "92
 
 PASADORES = LISTA_QB
 CORREDORES = LISTA_RB + LISTA_WR[1:] + LISTA_QB[1:] 
-# Se agregó la DL ofensiva al final de los receptores
 RECEPTORES = LISTA_WR + LISTA_RB[1:] + LISTA_DL
 
 LISTA_DEFENSA = [
@@ -223,7 +223,7 @@ if ganancia_final is not None:
         "TITLE": periodo_actual,  
         "PLAY #": len(st.session_state.lista_jugadas) + 1,
         "DIRECTION": st.session_state.direccion_actual, 
-        "HASH": hash_mark[0], # Extrae solo la "L", "M" o "R"
+        "HASH": hash_mark[0], 
         "YARD LN": yard_str, 
         "DN": st.session_state.down,               
         "DIST": st.session_state.distancia,        
@@ -237,9 +237,7 @@ if ganancia_final is not None:
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
-    # ACTUALIZACIONES SEGÚN EL MODO ELEGIDO
     if st.session_state.modo_avance == "🏈 Drive (Avanza)":
-        # 1. Actualizar Downs
         if st.session_state.resultado == "Interception" or is_td:
             st.session_state.down = 1
             st.session_state.distancia = 10
@@ -254,7 +252,6 @@ if ganancia_final is not None:
                     st.session_state.down = 1
                     st.session_state.distancia = 10
                     
-        # 2. Mover Balón Automáticamente
         abs_yard = st.session_state.yarda_actual if st.session_state.territorio == "Propio" else 100 - st.session_state.yarda_actual
         new_abs = abs_yard + ganancia_final
         
@@ -282,15 +279,21 @@ if st.session_state.lista_jugadas:
     st.info(f"Has registrado un total de {len(st.session_state.lista_jugadas)} jugadas en esta sesión.")
     df_jugadas = pd.DataFrame(st.session_state.lista_jugadas)
     
+    # --- LÓGICA PARA NOMBRES DE ARCHIVO DINÁMICOS ---
+    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+    nombre_practica_limpio = periodo_actual.replace(" ", "_")
+    nombre_csv = f"PumasCU_{nombre_practica_limpio}_{fecha_hoy}.csv"
+    nombre_excel = f"PumasCU_{nombre_practica_limpio}_{fecha_hoy}.xlsx"
+    
     c_csv, c_excel = st.columns(2)
     with c_csv:
         csv_data = df_jugadas.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Descargar CSV para Hudl", data=csv_data, file_name='hudl_import.csv', mime='text/csv', use_container_width=True)
+        st.download_button("📥 Descargar CSV para Hudl", data=csv_data, file_name=nombre_csv, mime='text/csv', use_container_width=True)
     with c_excel:
         excel_buffer = io.BytesIO()
         with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
             df_jugadas.to_excel(writer, index=False, sheet_name='Practica')
-        st.download_button("📊 Descargar Tabla Excel", data=excel_buffer.getvalue(), file_name='reporte.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+        st.download_button("📊 Descargar Tabla Excel", data=excel_buffer.getvalue(), file_name=nombre_excel, mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🗑️ Iniciar Nueva Práctica (Borrar Datos)", use_container_width=True):
