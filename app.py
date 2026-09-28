@@ -189,7 +189,6 @@ with col_izq:
 with col_cen:
     st.markdown("#### 🏁 Desarrollo")
     
-    # Cuadrícula 2x3 para ahorrar espacio vertical
     r1, r2 = st.columns(2)
     with r1:
         if st.button("🏈 Pase", type="primary" if st.session_state.resultado == "Pass" else "secondary", use_container_width=True): st.session_state.resultado = "Pass"; st.rerun()
@@ -208,12 +207,13 @@ with col_cen:
         receiver = st.selectbox("👐 Receptor", RECEPTORES)
     elif st.session_state.resultado == "Rush":
         runner = st.selectbox("💨 Corredor", CORREDORES)
-        st.write("") # Espaciador para mantener altura
+        st.write("") 
     elif st.session_state.resultado in ["Scramble", "Sack"]:
         passer = st.selectbox("🎯 QB", PASADORES)
         st.write("")
 
-    defensor_1 = st.selectbox("💥 Tackle / Pase Def.", LISTA_DEFENSA)
+    defensor_1 = st.selectbox("💥 Tackle principal / Pase Def.", LISTA_DEFENSA)
+    defensor_2 = st.selectbox("🤝 Asistencia (Opcional)", LISTA_DEFENSA)
 
 # ==========================================
 # COLUMNA DERECHA: CIERRE Y GUARDADO
@@ -223,7 +223,6 @@ with col_der:
     ganancia_final = None
     distancia_al_td = (100 - st.session_state.yarda_actual) if st.session_state.territorio == "Propio" else st.session_state.yarda_actual
 
-    # Botones principales gigantes con clase CSS para destacarlos
     st.markdown('<div class="btn-guardar">', unsafe_allow_html=True)
     if st.button("❌ 0 Yds (Incompleto/Línea)", use_container_width=True): ganancia_final = 0
     if st.button("➕ +3 Yds", use_container_width=True): ganancia_final = 3
@@ -268,7 +267,7 @@ if ganancia_final is not None:
         "RECEIVER": receiver.split(" - ")[0] if receiver != "N/A" else "",
         "PASSER": passer.split(" - ")[0] if passer != "N/A" else "",
         "TACKLER 1": defensor_1.split(" - ")[0] if defensor_1 != "N/A" else "",
-        "TACKLER 2": "" # Quitamos el 2do tackle para ahorrar espacio en pantalla, pero la columna sigue en el CSV
+        "TACKLER 2": defensor_2.split(" - ")[0] if defensor_2 != "N/A" else ""
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
