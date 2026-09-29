@@ -90,20 +90,17 @@ if 'resultado' not in st.session_state: st.session_state.resultado = "Pass"
 if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual = "Alberca"
 if 'hash_mark' not in st.session_state: st.session_state.hash_mark = "M"
 
-# --- LISTAS DEL ROSTER ---
-LISTA_QB = ["N/A", "3 - Leonardo Garza", "10 - Emiliano Sánchez", "17 - Jorge Corona"]
-LISTA_RB = ["N/A", "23 - Rodrigo Pérez", "26 - Luis Schrader", "32 - Alonso Báez", "34 - Emilio Melo", "35 - Hussein Santillán", "44 - Manlio Hernández"]
-LISTA_WR = ["N/A", "1 - Raúl Blanco", "12 - Christopher Cardona", "13 - Javier Vivas", "14 - Luis Medrano", "18 - Jahdiel Ponce", "81 - César Román", "82 - Jonathan Reyes", "83 - Ángel Reyes", "84 - Bruno Granados", "88 - Kin Villafuerte", "98 - Óscar Miranda"]
-LISTA_DL = ["0 - Jioshi Morrison", "9 - Joaquín Carriles", "11 - Raymundo Liceá", "91 - Miguel Martínez", "92 - Sergio Bautista", "94 - Juan Soriano", "95 - Saul Bautista", "99 - José Valdéz"]
+# --- LISTAS DEL ROSTER (Número y Apellido) ---
+LISTA_QB = ["N/A", "3 - Garza", "10 - Sánchez", "17 - Corona"]
+LISTA_RB = ["N/A", "23 - Pérez", "26 - Schrader", "32 - Báez", "34 - Melo", "35 - Santillán", "44 - Hernández"]
+LISTA_WR = ["N/A", "1 - Blanco", "12 - Cardona", "13 - Vivas", "14 - Medrano", "18 - Ponce", "81 - Román", "82 - Reyes", "83 - Reyes", "84 - Granados", "88 - Villafuerte", "98 - Miranda"]
+LISTA_DL = ["0 - Morrison", "9 - Carriles", "11 - Liceá", "91 - Martínez", "92 - Bautista", "94 - Soriano", "95 - Bautista", "99 - Valdéz"]
+LISTA_PB = ["5 - Hernández", "25 - Cerda", "80 - Mariano", "87 - Zamora"]
 
-WR_LIMPIO = [x for x in LISTA_WR if x != "N/A"]
-RB_LIMPIO = [x for x in LISTA_RB if x != "N/A"]
-QB_LIMPIO = [x for x in LISTA_QB if x != "N/A"]
-
-PASADORES = LISTA_QB + WR_LIMPIO + RB_LIMPIO
-CORREDORES = LISTA_RB + WR_LIMPIO + QB_LIMPIO
-RECEPTORES = LISTA_WR + RB_LIMPIO + LISTA_DL
-
+# Menús estrictos por posición
+PASADORES = LISTA_QB
+CORREDORES = LISTA_RB
+RECEPTORES = LISTA_WR + LISTA_PB
 LISTA_DEFENSA = ["N/A"] + LISTA_DL
 
 # --- 3. HEADER COMPACTO ---
@@ -113,7 +110,6 @@ with col_tit:
 with col_per:
     periodo_actual = st.selectbox("⏱️ PERIODO", ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"])
 with col_dwn:
-    # Este es el selector global que pediste. Define el nombre del archivo y la práctica.
     down_drill = st.selectbox("🎯 DOWN DRILL", ["N/A", "1D", "2D", "3D", "4D"])
 with col_num:
     st.metric("JUGADA", len(st.session_state.lista_jugadas) + 1)
@@ -157,7 +153,6 @@ with col_izq:
     st.session_state.yarda_actual = st.slider("Yarda exacta", min_value=1, max_value=50, value=st.session_state.yarda_actual, disabled=es_drive, label_visibility="collapsed")
     
     dw1, dw2, dw3, dw4 = st.columns(4)
-    # Este down es el que opera por jugada, totalmente independiente del de arriba
     if dw1.button("1D", type="primary" if st.session_state.down == 1 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 1; st.rerun()
     if dw2.button("2D", type="primary" if st.session_state.down == 2 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 2; st.rerun()
     if dw3.button("3D", type="primary" if st.session_state.down == 3 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 3; st.rerun()
@@ -243,7 +238,6 @@ if ganancia_final is not None:
     resultado_str = st.session_state.resultado + (" TD" if is_td else "")
     yard_str = "50" if st.session_state.yarda_actual == 50 else f"{st.session_state.territorio[0]}{st.session_state.yarda_actual}"
     
-    # Se fusiona el Periodo y el Escenario seleccionado arriba
     titulo_exportacion = f"{periodo_actual} {down_drill}" if down_drill != "N/A" else periodo_actual
     
     nueva_jugada = {
@@ -256,6 +250,7 @@ if ganancia_final is not None:
         "DIST": st.session_state.distancia,        
         "RESULT": resultado_str, 
         "GAIN/LS": ganancia_final,
+        # Se extrae únicamente el número de jersey gracias al split(" - ")[0]
         "RUNNER": runner.split(" - ")[0] if runner != "N/A" else "",
         "RECEIVER": receiver.split(" - ")[0] if receiver != "N/A" else "",
         "PASSER": passer.split(" - ")[0] if passer != "N/A" else "",
