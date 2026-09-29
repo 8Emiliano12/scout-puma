@@ -109,11 +109,12 @@ LISTA_DEFENSA = ["N/A"] + LISTA_DL
 # --- 3. HEADER COMPACTO ---
 col_tit, col_per, col_dwn, col_num = st.columns([1.2, 1.4, 0.7, 0.7])
 with col_tit:
-    st.markdown("<h2 style='margin-top:-20px;'>🏈 Pumas CU Scout</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='margin-top:-10px;'>🏈 Pumas CU Scout</h2>", unsafe_allow_html=True)
 with col_per:
-    periodo_actual = st.selectbox("⏱️ PERIODO", ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"], label_visibility="collapsed")
+    periodo_actual = st.selectbox("⏱️ PERIODO", ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"])
 with col_dwn:
-    st.metric("DOWN", f"{st.session_state.down}D")
+    # Este es el selector global que pediste. Define el nombre del archivo y la práctica.
+    down_drill = st.selectbox("🎯 DOWN DRILL", ["N/A", "1D", "2D", "3D", "4D"])
 with col_num:
     st.metric("JUGADA", len(st.session_state.lista_jugadas) + 1)
 
@@ -153,10 +154,10 @@ with col_izq:
     if yb4.button("40", disabled=es_drive, use_container_width=True): st.session_state.yarda_actual = 40; st.rerun()
     if yb5.button("50", disabled=es_drive, use_container_width=True): st.session_state.yarda_actual = 50; st.rerun()
 
-    yarda_val = st.slider("Yarda exacta", min_value=1, max_value=50, value=st.session_state.yarda_actual, disabled=es_drive, label_visibility="collapsed")
-    if not es_drive: st.session_state.yarda_actual = yarda_val
+    st.session_state.yarda_actual = st.slider("Yarda exacta", min_value=1, max_value=50, value=st.session_state.yarda_actual, disabled=es_drive, label_visibility="collapsed")
     
     dw1, dw2, dw3, dw4 = st.columns(4)
+    # Este down es el que opera por jugada, totalmente independiente del de arriba
     if dw1.button("1D", type="primary" if st.session_state.down == 1 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 1; st.rerun()
     if dw2.button("2D", type="primary" if st.session_state.down == 2 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 2; st.rerun()
     if dw3.button("3D", type="primary" if st.session_state.down == 3 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 3; st.rerun()
@@ -242,9 +243,8 @@ if ganancia_final is not None:
     resultado_str = st.session_state.resultado + (" TD" if is_td else "")
     yard_str = "50" if st.session_state.yarda_actual == 50 else f"{st.session_state.territorio[0]}{st.session_state.yarda_actual}"
     
-    titulo_exportacion = periodo_actual
-    if "SKELL" in periodo_actual or "BATTLE" in periodo_actual:
-        titulo_exportacion = f"{periodo_actual} {st.session_state.down}D"
+    # Se fusiona el Periodo y el Escenario seleccionado arriba
+    titulo_exportacion = f"{periodo_actual} {down_drill}" if down_drill != "N/A" else periodo_actual
     
     nueva_jugada = {
         "TITLE": titulo_exportacion,  
@@ -304,7 +304,8 @@ if st.session_state.lista_jugadas:
         df_jugadas = pd.DataFrame(st.session_state.lista_jugadas)
         fecha_hoy = datetime.now().strftime("%d-%m-%Y")
         
-        nombre_descarga = f"{periodo_actual} {st.session_state.down}down {fecha_hoy}"
+        str_down = down_drill.replace("D", "down") if down_drill != "N/A" else ""
+        nombre_descarga = f"{periodo_actual} {str_down} {fecha_hoy}".strip().replace("  ", " ")
         
         c_csv, c_excel, c_del = st.columns(3)
         with c_csv:
