@@ -23,7 +23,7 @@ st.markdown("""
     
     /* Botones compactos y ágiles */
     div.stButton > button {
-        height: 50px; /* Un poco más delgados para que quepa todo */
+        height: 50px; 
         font-size: 16px !important;
         font-weight: bold;
         border-radius: 8px;
@@ -95,37 +95,29 @@ if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual
 if 'hash_mark' not in st.session_state: st.session_state.hash_mark = "M"
 
 # --- LISTAS DEL ROSTER ---
-LISTA_QB = ["N/A", "3 - Garza", "10 - Sánchez", "17 - Corona"]
-LISTA_RB = ["N/A", "23 - Pérez", "26 - Schrader", "32 - Báez", "34 - Melo", "35 - Santillán", "44 - Hernández"]
-LISTA_WR = ["N/A", "1 - Blanco", "12 - Cardona", "13 - Vivas", "14 - Medrano", "18 - Ponce", "81 - Román", "82 - Reyes", "83 - Reyes", "84 - Granados", "88 - Villafuerte", "98 - Miranda"]
-LISTA_DL = ["0 - Morrison", "9 - Carriles", "11 - Liceá", "91 - Martínez", "92 - Bautista", "94 - Soriano", "95 - Bautista", "99 - Valdéz"]
-LISTA_OL = ["51 - Nogueda", "53 - Hernández", "54 - Barrientos", "58 - Corona", "68 - Puente", "70 - Aparicio", "71 - Brito", "72 - Trejo", "73 - Inzunza", "74 - Romero", "76 - Sánchez", "77 - Fernández", "89 - Núñez"]
-LISTA_PB_K = ["5 - Hernández", "25 - Cerda", "80 - Mariano", "87 - Zamora"]
+LISTA_QB = ["N/A", "3 - Leonardo Garza", "10 - Emiliano Sánchez", "17 - Jorge Corona"]
+LISTA_RB = ["N/A", "23 - Rodrigo Pérez", "26 - Luis Schrader", "32 - Alonso Báez", "34 - Emilio Melo", "35 - Hussein Santillán", "44 - Manlio Hernández"]
+LISTA_WR = ["N/A", "1 - Raúl Blanco", "12 - Christopher Cardona", "13 - Javier Vivas", "14 - Luis Medrano", "18 - Jahdiel Ponce", "81 - César Román", "82 - Jonathan Reyes", "83 - Ángel Reyes", "84 - Bruno Granados", "88 - Kin Villafuerte", "98 - Óscar Miranda"]
+LISTA_DL = ["0 - Jioshi Morrison", "9 - Joaquín Carriles", "11 - Raymundo Liceá", "91 - Miguel Martínez", "92 - Sergio Bautista", "94 - Juan Soriano", "95 - Saul Bautista", "99 - José Valdéz"]
 
 WR_LIMPIO = [x for x in LISTA_WR if x != "N/A"]
 RB_LIMPIO = [x for x in LISTA_RB if x != "N/A"]
 QB_LIMPIO = [x for x in LISTA_QB if x != "N/A"]
 
-PASADORES = LISTA_QB + LISTA_PB_K + WR_LIMPIO + RB_LIMPIO
-CORREDORES = LISTA_RB + WR_LIMPIO + QB_LIMPIO + LISTA_PB_K
-RECEPTORES = LISTA_WR + RB_LIMPIO + LISTA_DL + LISTA_PB_K + LISTA_OL
+PASADORES = LISTA_QB + WR_LIMPIO + RB_LIMPIO
+CORREDORES = LISTA_RB + WR_LIMPIO + QB_LIMPIO
+RECEPTORES = LISTA_WR + RB_LIMPIO + LISTA_DL
 
-LISTA_DEFENSA = [
-    "N/A", "0 - Morrison", "2 - Soriano", "4 - Mercado", "5 - Hernández", "6 - González", 
-    "7 - Bañuelos", "8 - Higelin", "9 - Carriles", "11 - Liceá", "15 - Álvarez", 
-    "16 - Aguilar", "19 - Velasco", "21 - Moreno", "22 - Acosta", "24 - Ceballos", 
-    "25 - Cerda", "27 - Villegas", "28 - Cervantes", "29 - Juárez", "30 - Cabrera", 
-    "31 - Arreola", "33 - Bañuelos", "39 - Saldaña", "40 - Ocampo", "42 - Trejo", 
-    "43 - Rodríguez", "52 - Contreras", "59 - González", "80 - Mariano", "87 - Zamora", 
-    "90 - Saavedra", "91 - Martínez", "92 - Bautista", "94 - Soriano", "95 - Bautista", "99 - Valdéz"
-]
+# La defensiva ahora está conformada EXCLUSIVAMENTE por la Línea Defensiva (DL)
+LISTA_DEFENSA = ["N/A"] + LISTA_DL
 
 # --- 3. HEADER COMPACTO ---
 col_tit, col_per, col_num = st.columns([1.5, 2, 0.5])
 with col_tit:
     st.markdown("<h2 style='margin-top:-20px;'>🏈 Pumas CU Scout</h2>", unsafe_allow_html=True)
 with col_per:
-    periodo_actual = st.selectbox("⏱️ PERIODO", ["TEAM", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"], label_visibility="collapsed")
+    # Se agregó "BATTLE DOWN" al menú
+    periodo_actual = st.selectbox("⏱️ PERIODO", ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"], label_visibility="collapsed")
 with col_num:
     st.metric("JUGADA", len(st.session_state.lista_jugadas) + 1)
 
@@ -253,8 +245,13 @@ if ganancia_final is not None:
     resultado_str = st.session_state.resultado + (" TD" if is_td else "")
     yard_str = "50" if st.session_state.yarda_actual == 50 else f"{st.session_state.territorio[0]}{st.session_state.yarda_actual}"
     
+    # --- LOGICA DE TÍTULO DINÁMICO PARA SKELL ---
+    titulo_exportacion = periodo_actual
+    if "SKELL" in periodo_actual:
+        titulo_exportacion = f"{periodo_actual} {st.session_state.down}D"
+    
     nueva_jugada = {
-        "TITLE": periodo_actual,  
+        "TITLE": titulo_exportacion,  
         "PLAY #": len(st.session_state.lista_jugadas) + 1,
         "DIRECTION": st.session_state.direccion_actual, 
         "HASH": st.session_state.hash_mark, 
