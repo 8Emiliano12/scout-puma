@@ -153,7 +153,8 @@ with col_izq:
     if yb4.button("40", disabled=es_drive, use_container_width=True): st.session_state.yarda_actual = 40; st.rerun()
     if yb5.button("50", disabled=es_drive, use_container_width=True): st.session_state.yarda_actual = 50; st.rerun()
 
-    st.session_state.yarda_actual = st.slider("Yarda exacta", min_value=1, max_value=50, value=st.session_state.yarda_actual, disabled=es_drive, label_visibility="collapsed")
+    yarda_val = st.slider("Yarda exacta", min_value=1, max_value=50, value=st.session_state.yarda_actual, disabled=es_drive, label_visibility="collapsed")
+    if not es_drive: st.session_state.yarda_actual = yarda_val
     
     dw1, dw2, dw3, dw4 = st.columns(4)
     if dw1.button("1D", type="primary" if st.session_state.down == 1 else "secondary", use_container_width=True, disabled=es_drive): st.session_state.down = 1; st.rerun()
@@ -242,7 +243,7 @@ if ganancia_final is not None:
     yard_str = "50" if st.session_state.yarda_actual == 50 else f"{st.session_state.territorio[0]}{st.session_state.yarda_actual}"
     
     titulo_exportacion = periodo_actual
-    if "SKELL" in periodo_actual:
+    if "SKELL" in periodo_actual or "BATTLE" in periodo_actual:
         titulo_exportacion = f"{periodo_actual} {st.session_state.down}D"
     
     nueva_jugada = {
@@ -301,10 +302,8 @@ st.markdown("---")
 if st.session_state.lista_jugadas:
     with st.expander("📥 Exportar Práctica o Borrar Sesión", expanded=False):
         df_jugadas = pd.DataFrame(st.session_state.lista_jugadas)
-        # Formato dd-mm-yyyy con guiones para compatibilidad
         fecha_hoy = datetime.now().strftime("%d-%m-%Y")
         
-        # Estructura final del nombre: "PERIODO down_numdown fecha"
         nombre_descarga = f"{periodo_actual} {st.session_state.down}down {fecha_hoy}"
         
         c_csv, c_excel, c_del = st.columns(3)
