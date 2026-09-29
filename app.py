@@ -94,10 +94,11 @@ if 'hash_mark' not in st.session_state: st.session_state.hash_mark = "M"
 LISTA_QB = ["N/A", "3 - Leonardo Garza", "10 - Emiliano Sánchez", "17 - Jorge Corona"]
 LISTA_RB = ["N/A", "23 - Rodrigo Pérez", "26 - Luis Schrader", "32 - Alonso Báez", "34 - Emilio Melo", "35 - Hussein Santillán", "44 - Manlio Hernández"]
 LISTA_WR = ["N/A", "1 - Raúl Blanco", "12 - Christopher Cardona", "13 - Javier Vivas", "14 - Luis Medrano", "18 - Jahdiel Ponce", "81 - César Román", "82 - Jonathan Reyes", "83 - Ángel Reyes", "84 - Bruno Granados", "88 - Kin Villafuerte", "98 - Óscar Miranda"]
+LISTA_DL = ["0 - Jioshi Morrison", "9 - Joaquín Carriles", "11 - Raymundo Liceá", "91 - Miguel Martínez", "92 - Sergio Bautista", "94 - Juan Soriano", "95 - Saul Bautista", "99 - José Valdéz"]
 LISTA_PB = ["5 - Julio Hernández", "25 - Diego Cerda", "80 - Alan Mariano", "87 - Emiliano Zamora"]
 
-# --- LA DEFENSIVA COMPLETA (DL, LB, CB, DB) ---
-LISTA_DEFENSA = [
+# --- LA DEFENSIVA COMPLETA ---
+LISTA_DEFENSA_BASE = [
     "N/A", "0 - Jioshi Morrison", "2 - Aarón Soriano", "4 - Diego Mercado", 
     "6 - Abraham González", "7 - Luis Bañuelos", "8 - Luis Higelin", 
     "9 - Joaquín Carriles", "11 - Raymundo Liceá", "15 - Emiliano Álvarez", 
@@ -111,13 +112,15 @@ LISTA_DEFENSA = [
     "95 - Saul Bautista", "99 - José Valdéz"
 ]
 
-# Menús estrictos por posición
 WR_LIMPIO = [x for x in LISTA_WR if x != "N/A"]
 RB_LIMPIO = [x for x in LISTA_RB if x != "N/A"]
 
-PASADORES = LISTA_QB
-CORREDORES = LISTA_RB
-RECEPTORES = LISTA_WR + LISTA_PB
+# Menús estrictos por posición + "Otro..." al final
+PASADORES = LISTA_QB + ["Otro..."]
+CORREDORES = LISTA_RB + ["Otro..."]
+# Receptores incluye a los WR, a los RB (Corredores) y a los PB
+RECEPTORES = LISTA_WR + RB_LIMPIO + LISTA_PB + ["Otro..."]
+LISTA_DEFENSA = LISTA_DEFENSA_BASE + ["Otro..."]
 
 # --- 3. HEADER COMPACTO ---
 col_tit, col_per, col_dwn, col_num = st.columns([1.2, 1.4, 0.7, 0.7])
@@ -195,6 +198,8 @@ with col_cen:
         if st.button("🏈 Pase", type="primary" if st.session_state.resultado == "Pass" else "secondary", use_container_width=True): st.session_state.resultado = "Pass"; st.rerun()
         if st.button("🏃‍♂️ Scramble", type="primary" if st.session_state.resultado == "Scramble" else "secondary", use_container_width=True): st.session_state.resultado = "Scramble"; st.rerun()
         if st.button("💥 Sack", type="primary" if st.session_state.resultado == "Sack" else "secondary", use_container_width=True): st.session_state.resultado = "Sack"; st.rerun()
+        # NUEVO BOTÓN: Drop
+        if st.button("👐 Drop", type="primary" if st.session_state.resultado == "Drop" else "secondary", use_container_width=True): st.session_state.resultado = "Drop"; st.rerun()
     with r2:
         if st.button("🏃 Carrera", type="primary" if st.session_state.resultado == "Rush" else "secondary", use_container_width=True): st.session_state.resultado = "Rush"; st.rerun()
         if st.button("❌ Incompleto", type="primary" if st.session_state.resultado == "Incompleto" else "secondary", use_container_width=True): st.session_state.resultado = "Incompleto"; st.rerun()
@@ -203,18 +208,29 @@ with col_cen:
     st.markdown("<br>", unsafe_allow_html=True)
     passer, runner, receiver = "N/A", "N/A", "N/A"
     
-    if st.session_state.resultado in ["Pass", "Incompleto", "Interception"]:
-        passer = st.selectbox("🎯 QB", PASADORES)
-        receiver = st.selectbox("👐 Receptor", RECEPTORES)
+    # Lógica de Inputs Dinámicos para "Otro..."
+    if st.session_state.resultado in ["Pass", "Incompleto", "Interception", "Drop"]:
+        passer_sel = st.selectbox("🎯 QB", PASADORES)
+        passer = st.text_input("Escribe el QB", key="qb_otro", label_visibility="collapsed") if passer_sel == "Otro..." else passer_sel
+        
+        receiver_sel = st.selectbox("👐 Receptor", RECEPTORES)
+        receiver = st.text_input("Escribe el Receptor", key="rec_otro", label_visibility="collapsed") if receiver_sel == "Otro..." else receiver_sel
+        
     elif st.session_state.resultado == "Rush":
-        runner = st.selectbox("💨 Corredor", CORREDORES)
+        runner_sel = st.selectbox("💨 Corredor", CORREDORES)
+        runner = st.text_input("Escribe el Corredor", key="run_otro", label_visibility="collapsed") if runner_sel == "Otro..." else runner_sel
         st.write("") 
+        
     elif st.session_state.resultado in ["Scramble", "Sack"]:
-        passer = st.selectbox("🎯 QB", PASADORES)
+        passer_sel = st.selectbox("🎯 QB", PASADORES)
+        passer = st.text_input("Escribe el QB", key="qb_otro2", label_visibility="collapsed") if passer_sel == "Otro..." else passer_sel
         st.write("")
 
-    defensor_1 = st.selectbox("💥 Tackle principal / Pase Def.", LISTA_DEFENSA)
-    defensor_2 = st.selectbox("🤝 Asistencia (Opcional)", LISTA_DEFENSA)
+    d1_sel = st.selectbox("💥 Tackle principal / Pase Def.", LISTA_DEFENSA)
+    defensor_1 = st.text_input("Escribe Tackle 1", key="d1_otro", label_visibility="collapsed") if d1_sel == "Otro..." else d1_sel
+    
+    d2_sel = st.selectbox("🤝 Asistencia (Opcional)", LISTA_DEFENSA)
+    defensor_2 = st.text_input("Escribe Tackle 2", key="d2_otro", label_visibility="collapsed") if d2_sel == "Otro..." else d2_sel
 
 # ==========================================
 # COLUMNA DERECHA: CIERRE Y GUARDADO
@@ -225,7 +241,7 @@ with col_der:
     distancia_al_td = (100 - st.session_state.yarda_actual) if st.session_state.territorio == "Propio" else st.session_state.yarda_actual
 
     st.markdown('<div class="btn-guardar">', unsafe_allow_html=True)
-    if st.button("❌ 0 Yds (Incompleto/Línea)", use_container_width=True): ganancia_final = 0
+    if st.button("❌ 0 Yds (Incompleto/Línea/Drop)", use_container_width=True): ganancia_final = 0
     if st.button("➕ +3 Yds", use_container_width=True): ganancia_final = 3
     if st.button("➕ +5 Yds", use_container_width=True): ganancia_final = 5
     if st.button(f"🚀 1er Down (+{st.session_state.distancia})", use_container_width=True): ganancia_final = st.session_state.distancia
@@ -243,8 +259,12 @@ with col_der:
 
 # --- MOTOR LÓGICO Y MATEMÁTICO ---
 if ganancia_final is not None:
-    if st.session_state.resultado == "Incompleto": ganancia_final = 0
-    if st.session_state.resultado == "Sack" and ganancia_final > 0: ganancia_final = -ganancia_final 
+    # Fuerza a 0 yardas si fue Incompleto o Drop, para evitar errores de captura
+    if st.session_state.resultado in ["Incompleto", "Drop"]: 
+        ganancia_final = 0
+        
+    if st.session_state.resultado == "Sack" and ganancia_final > 0: 
+        ganancia_final = -ganancia_final 
     
     is_td = False
     if ganancia_final >= distancia_al_td and st.session_state.resultado in ["Pass", "Rush", "Scramble"]:
@@ -266,17 +286,17 @@ if ganancia_final is not None:
         "DIST": st.session_state.distancia,        
         "RESULT": resultado_str, 
         "GAIN/LS": ganancia_final,
-        # La función split(" - ")[0] asegura que SOLO se exporte el número (e.g. "3")
-        "RUNNER": runner.split(" - ")[0] if runner != "N/A" else "",
-        "RECEIVER": receiver.split(" - ")[0] if receiver != "N/A" else "",
-        "PASSER": passer.split(" - ")[0] if passer != "N/A" else "",
-        "TACKLER 1": defensor_1.split(" - ")[0] if defensor_1 != "N/A" else "",
-        "TACKLER 2": defensor_2.split(" - ")[0] if defensor_2 != "N/A" else ""
+        # Guarda el número de jersey extraído o el texto libre si se seleccionó "Otro..."
+        "RUNNER": runner.split(" - ")[0] if runner not in ["N/A", ""] else "",
+        "RECEIVER": receiver.split(" - ")[0] if receiver not in ["N/A", ""] else "",
+        "PASSER": passer.split(" - ")[0] if passer not in ["N/A", ""] else "",
+        "TACKLER 1": defensor_1.split(" - ")[0] if defensor_1 not in ["N/A", ""] else "",
+        "TACKLER 2": defensor_2.split(" - ")[0] if defensor_2 not in ["N/A", ""] else ""
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
     if st.session_state.modo_avance == "🏈 Drive":
-        if st.session_state.resultado == "Interception" or is_td:
+        if st.session_state.resultado in ["Interception", "Drop", "Incompleto"] or is_td:
             st.session_state.down = 1
             st.session_state.distancia = 10
         else:
