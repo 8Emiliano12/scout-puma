@@ -94,14 +94,30 @@ if 'hash_mark' not in st.session_state: st.session_state.hash_mark = "M"
 LISTA_QB = ["N/A", "3 - Leonardo Garza", "10 - Emiliano Sánchez", "17 - Jorge Corona"]
 LISTA_RB = ["N/A", "23 - Rodrigo Pérez", "26 - Luis Schrader", "32 - Alonso Báez", "34 - Emilio Melo", "35 - Hussein Santillán", "44 - Manlio Hernández"]
 LISTA_WR = ["N/A", "1 - Raúl Blanco", "12 - Christopher Cardona", "13 - Javier Vivas", "14 - Luis Medrano", "18 - Jahdiel Ponce", "81 - César Román", "82 - Jonathan Reyes", "83 - Ángel Reyes", "84 - Bruno Granados", "88 - Kin Villafuerte", "98 - Óscar Miranda"]
-LISTA_DL = ["0 - Jioshi Morrison", "9 - Joaquín Carriles", "11 - Raymundo Liceá", "91 - Miguel Martínez", "92 - Sergio Bautista", "94 - Juan Soriano", "95 - Saul Bautista", "99 - José Valdéz"]
 LISTA_PB = ["5 - Julio Hernández", "25 - Diego Cerda", "80 - Alan Mariano", "87 - Emiliano Zamora"]
 
+# --- LA DEFENSIVA COMPLETA (DL, LB, CB, DB) ---
+LISTA_DEFENSA = [
+    "N/A", "0 - Jioshi Morrison", "2 - Aarón Soriano", "4 - Diego Mercado", 
+    "6 - Abraham González", "7 - Luis Bañuelos", "8 - Luis Higelin", 
+    "9 - Joaquín Carriles", "11 - Raymundo Liceá", "15 - Emiliano Álvarez", 
+    "16 - Ian Aguilar", "19 - Jirvan Velasco", "21 - Armando Moreno", 
+    "22 - Juan Acosta", "24 - David Ceballos", "27 - Rodrigo Villegas", 
+    "28 - Sergio Cervantes", "29 - Santiago Juárez", "30 - Néstor Cabrera", 
+    "31 - Juan Arreola", "33 - Diego Bañuelos", "39 - Santiago Saldaña", 
+    "40 - Yeshua Ocampo", "42 - Alexis Trejo", "43 - Erick Rodríguez", 
+    "52 - Diego Contreras", "59 - Óscar González", "90 - Rafael Saavedra", 
+    "91 - Miguel Martínez", "92 - Sergio Bautista", "94 - Juan Soriano", 
+    "95 - Saul Bautista", "99 - José Valdéz"
+]
+
 # Menús estrictos por posición
+WR_LIMPIO = [x for x in LISTA_WR if x != "N/A"]
+RB_LIMPIO = [x for x in LISTA_RB if x != "N/A"]
+
 PASADORES = LISTA_QB
 CORREDORES = LISTA_RB
 RECEPTORES = LISTA_WR + LISTA_PB
-LISTA_DEFENSA = ["N/A"] + LISTA_DL
 
 # --- 3. HEADER COMPACTO ---
 col_tit, col_per, col_dwn, col_num = st.columns([1.2, 1.4, 0.7, 0.7])
