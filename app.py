@@ -9,7 +9,6 @@ st.set_page_config(page_title="Pumas CU Scout", page_icon="🏈", layout="wide",
 
 st.markdown("""
     <style>
-    /* Eliminar márgenes para aprovechar el 100% de la pantalla del iPad */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 1rem !important;
@@ -17,11 +16,10 @@ st.markdown("""
         padding-right: 1rem !important;
         max-width: 100% !important;
     }
-    header {visibility: hidden;} /* Oculta la barra superior de Streamlit */
+    header {visibility: hidden;}
     #MainMenu {visibility: hidden;} 
     footer {visibility: hidden;}
     
-    /* Botones compactos y ágiles */
     div.stButton > button {
         height: 50px; 
         font-size: 16px !important;
@@ -37,7 +35,6 @@ st.markdown("""
         color: white;
         border: none;
     }
-    /* Botones de guardado más llamativos */
     .btn-guardar > div > button {
         background-color: #2E7D32 !important;
         color: white !important;
@@ -49,7 +46,6 @@ st.markdown("""
         color: #1a1a1a;
         margin-bottom: 0px !important;
     }
-    /* Número de jugada gigante en la esquina */
     [data-testid="stMetricValue"] {
         font-size: 45px !important;
         color: #1F4E78;
@@ -108,16 +104,16 @@ PASADORES = LISTA_QB + WR_LIMPIO + RB_LIMPIO
 CORREDORES = LISTA_RB + WR_LIMPIO + QB_LIMPIO
 RECEPTORES = LISTA_WR + RB_LIMPIO + LISTA_DL
 
-# La defensiva ahora está conformada EXCLUSIVAMENTE por la Línea Defensiva (DL)
 LISTA_DEFENSA = ["N/A"] + LISTA_DL
 
 # --- 3. HEADER COMPACTO ---
-col_tit, col_per, col_num = st.columns([1.5, 2, 0.5])
+col_tit, col_per, col_dwn, col_num = st.columns([1.2, 1.4, 0.7, 0.7])
 with col_tit:
     st.markdown("<h2 style='margin-top:-20px;'>🏈 Pumas CU Scout</h2>", unsafe_allow_html=True)
 with col_per:
-    # Se agregó "BATTLE DOWN" al menú
     periodo_actual = st.selectbox("⏱️ PERIODO", ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"], label_visibility="collapsed")
+with col_dwn:
+    st.metric("DOWN", f"{st.session_state.down}D")
 with col_num:
     st.metric("JUGADA", len(st.session_state.lista_jugadas) + 1)
 
@@ -232,7 +228,7 @@ with col_der:
         if st.button("✅ Guardar", use_container_width=True, type="primary"):
             ganancia_final = ganancia_manual
 
-# --- MOTOR LÓGICO Y MATEMÁTICO (Oculto de la UI) ---
+# --- MOTOR LÓGICO Y MATEMÁTICO ---
 if ganancia_final is not None:
     if st.session_state.resultado == "Incompleto": ganancia_final = 0
     if st.session_state.resultado == "Sack" and ganancia_final > 0: ganancia_final = -ganancia_final 
@@ -245,7 +241,6 @@ if ganancia_final is not None:
     resultado_str = st.session_state.resultado + (" TD" if is_td else "")
     yard_str = "50" if st.session_state.yarda_actual == 50 else f"{st.session_state.territorio[0]}{st.session_state.yarda_actual}"
     
-    # --- LOGICA DE TÍTULO DINÁMICO PARA SKELL ---
     titulo_exportacion = periodo_actual
     if "SKELL" in periodo_actual:
         titulo_exportacion = f"{periodo_actual} {st.session_state.down}D"
@@ -256,7 +251,7 @@ if ganancia_final is not None:
         "DIRECTION": st.session_state.direccion_actual, 
         "HASH": st.session_state.hash_mark, 
         "YARD LN": yard_str, 
-        "DN": st.session_state.down,               
+        "DOWN": st.session_state.down,
         "DIST": st.session_state.distancia,        
         "RESULT": resultado_str, 
         "GAIN/LS": ganancia_final,
@@ -302,22 +297,25 @@ if ganancia_final is not None:
 
 st.markdown("---")
 
-# --- DESCARGAS (Ocultas hasta que haya jugadas para ahorrar espacio visual) ---
+# --- DESCARGAS ---
 if st.session_state.lista_jugadas:
     with st.expander("📥 Exportar Práctica o Borrar Sesión", expanded=False):
         df_jugadas = pd.DataFrame(st.session_state.lista_jugadas)
-        fecha_hoy = datetime.now().strftime("%Y-%m-%d")
-        nombre_practica = periodo_actual.replace(" ", "_")
+        # Formato dd-mm-yyyy con guiones para compatibilidad
+        fecha_hoy = datetime.now().strftime("%d-%m-%Y")
+        
+        # Estructura final del nombre: "PERIODO down_numdown fecha"
+        nombre_descarga = f"{periodo_actual} {st.session_state.down}down {fecha_hoy}"
         
         c_csv, c_excel, c_del = st.columns(3)
         with c_csv:
             csv_data = df_jugadas.to_csv(index=False).encode('utf-8')
-            st.download_button("Descargar CSV (Hudl)", data=csv_data, file_name=f"PumasCU_{nombre_practica}_{fecha_hoy}.csv", mime='text/csv', use_container_width=True)
+            st.download_button("Descargar CSV (Hudl)", data=csv_data, file_name=f"{nombre_descarga}.csv", mime='text/csv', use_container_width=True)
         with c_excel:
             excel_buffer = io.BytesIO()
             with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
                 df_jugadas.to_excel(writer, index=False, sheet_name='Practica')
-            st.download_button("Descargar Excel", data=excel_buffer.getvalue(), file_name=f"PumasCU_{nombre_practica}_{fecha_hoy}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+            st.download_button("Descargar Excel", data=excel_buffer.getvalue(), file_name=f"{nombre_descarga}.xlsx", mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
         with c_del:
             if st.button("🗑️ Borrar Práctica", use_container_width=True):
                 for key in list(st.session_state.keys()): del st.session_state[key]
