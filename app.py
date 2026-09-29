@@ -90,12 +90,12 @@ if 'resultado' not in st.session_state: st.session_state.resultado = "Pass"
 if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual = "Alberca"
 if 'hash_mark' not in st.session_state: st.session_state.hash_mark = "M"
 
-# --- LISTAS DEL ROSTER (Número y Apellido) ---
-LISTA_QB = ["N/A", "3 - Garza", "10 - Sánchez", "17 - Corona"]
-LISTA_RB = ["N/A", "23 - Pérez", "26 - Schrader", "32 - Báez", "34 - Melo", "35 - Santillán", "44 - Hernández"]
-LISTA_WR = ["N/A", "1 - Blanco", "12 - Cardona", "13 - Vivas", "14 - Medrano", "18 - Ponce", "81 - Román", "82 - Reyes", "83 - Reyes", "84 - Granados", "88 - Villafuerte", "98 - Miranda"]
-LISTA_DL = ["0 - Morrison", "9 - Carriles", "11 - Liceá", "91 - Martínez", "92 - Bautista", "94 - Soriano", "95 - Bautista", "99 - Valdéz"]
-LISTA_PB = ["5 - Hernández", "25 - Cerda", "80 - Mariano", "87 - Zamora"]
+# --- LISTAS DEL ROSTER (Número, Nombre y Apellido) ---
+LISTA_QB = ["N/A", "3 - Leonardo Garza", "10 - Emiliano Sánchez", "17 - Jorge Corona"]
+LISTA_RB = ["N/A", "23 - Rodrigo Pérez", "26 - Luis Schrader", "32 - Alonso Báez", "34 - Emilio Melo", "35 - Hussein Santillán", "44 - Manlio Hernández"]
+LISTA_WR = ["N/A", "1 - Raúl Blanco", "12 - Christopher Cardona", "13 - Javier Vivas", "14 - Luis Medrano", "18 - Jahdiel Ponce", "81 - César Román", "82 - Jonathan Reyes", "83 - Ángel Reyes", "84 - Bruno Granados", "88 - Kin Villafuerte", "98 - Óscar Miranda"]
+LISTA_DL = ["0 - Jioshi Morrison", "9 - Joaquín Carriles", "11 - Raymundo Liceá", "91 - Miguel Martínez", "92 - Sergio Bautista", "94 - Juan Soriano", "95 - Saul Bautista", "99 - José Valdéz"]
+LISTA_PB = ["5 - Julio Hernández", "25 - Diego Cerda", "80 - Alan Mariano", "87 - Emiliano Zamora"]
 
 # Menús estrictos por posición
 PASADORES = LISTA_QB
@@ -250,7 +250,7 @@ if ganancia_final is not None:
         "DIST": st.session_state.distancia,        
         "RESULT": resultado_str, 
         "GAIN/LS": ganancia_final,
-        # Se extrae únicamente el número de jersey gracias al split(" - ")[0]
+        # La función split(" - ")[0] asegura que SOLO se exporte el número (e.g. "3")
         "RUNNER": runner.split(" - ")[0] if runner != "N/A" else "",
         "RECEIVER": receiver.split(" - ")[0] if receiver != "N/A" else "",
         "PASSER": passer.split(" - ")[0] if passer != "N/A" else "",
