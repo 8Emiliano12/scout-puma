@@ -58,7 +58,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 1.5 SCRIPT PARA BLOQUEAR EL TECLADO VIRTUAL EN TABLETS ---
+# --- 1.5 SCRIPT PARA BLOQUEAR EL TECLADO VIRTUAL EN TABLETS (Versión Reforzada) ---
 components.html(
     """
     <script>
@@ -66,19 +66,23 @@ components.html(
     function disableKeyboard() {
         const inputs = doc.querySelectorAll('div[data-baseweb="select"] input');
         inputs.forEach(inp => {
-            inp.setAttribute('inputmode', 'none');
-            inp.setAttribute('autocomplete', 'off'); 
+            if (!inp.hasAttribute('readonly')) {
+                inp.setAttribute('readonly', 'true');
+                inp.setAttribute('inputmode', 'none');
+                inp.setAttribute('autocomplete', 'off'); 
+            }
         });
     }
+    const observer = new MutationObserver(disableKeyboard);
+    observer.observe(doc.body, { childList: true, subtree: true });
     disableKeyboard();
-    setInterval(disableKeyboard, 500);
     </script>
     """,
     height=0,
     width=0
 )
 
-# --- 2. INICIALIZACIÓN DE MEMORIA ---
+# --- 2. INICIALIZACIÓN DE MEMORIA Y ROSTERS DINÁMICOS ---
 if 'lista_jugadas' not in st.session_state: st.session_state.lista_jugadas = []
 if 'yarda_actual' not in st.session_state: st.session_state.yarda_actual = 20
 if 'territorio' not in st.session_state: st.session_state.territorio = "Propio"
@@ -90,44 +94,46 @@ if 'resultado' not in st.session_state: st.session_state.resultado = "Pass"
 if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual = "Alberca"
 if 'hash_mark' not in st.session_state: st.session_state.hash_mark = "M"
 
-# --- LISTAS DEL ROSTER (Número, Nombre y Apellido) ---
-LISTA_QB = ["N/A", "3 - Leonardo Garza", "10 - Emiliano Sánchez", "17 - Jorge Corona"]
-LISTA_RB = ["N/A", "23 - Rodrigo Pérez", "26 - Luis Schrader", "32 - Alonso Báez", "34 - Emilio Melo", "35 - Hussein Santillán", "44 - Manlio Hernández"]
-LISTA_WR = ["N/A", "1 - Raúl Blanco", "12 - Christopher Cardona", "13 - Javier Vivas", "14 - Luis Medrano", "18 - Jahdiel Ponce", "81 - César Román", "82 - Jonathan Reyes", "83 - Ángel Reyes", "84 - Bruno Granados", "88 - Kin Villafuerte", "98 - Óscar Miranda"]
-LISTA_DL = ["0 - Jioshi Morrison", "9 - Joaquín Carriles", "11 - Raymundo Liceá", "91 - Miguel Martínez", "92 - Sergio Bautista", "94 - Juan Soriano", "95 - Saul Bautista", "99 - José Valdéz"]
-LISTA_PB = ["5 - Julio Hernández", "25 - Diego Cerda", "80 - Alan Mariano", "87 - Emiliano Zamora"]
-
-# --- LA DEFENSIVA COMPLETA ---
-LISTA_DEFENSA_BASE = [
-    "N/A", "0 - Jioshi Morrison", "2 - Aarón Soriano", "4 - Diego Mercado", 
-    "6 - Abraham González", "7 - Luis Bañuelos", "8 - Luis Higelin", 
-    "9 - Joaquín Carriles", "11 - Raymundo Liceá", "15 - Emiliano Álvarez", 
-    "16 - Ian Aguilar", "19 - Jirvan Velasco", "21 - Armando Moreno", 
-    "22 - Juan Acosta", "24 - David Ceballos", "27 - Rodrigo Villegas", 
-    "28 - Sergio Cervantes", "29 - Santiago Juárez", "30 - Néstor Cabrera", 
-    "31 - Juan Arreola", "33 - Diego Bañuelos", "39 - Santiago Saldaña", 
-    "40 - Yeshua Ocampo", "42 - Alexis Trejo", "43 - Erick Rodríguez", 
-    "52 - Diego Contreras", "59 - Óscar González", "90 - Rafael Saavedra", 
-    "91 - Miguel Martínez", "92 - Sergio Bautista", "94 - Juan Soriano", 
+# Inicialización del Roster en memoria para poder agregar jugadores nuevos
+if 'roster_qb' not in st.session_state: st.session_state.roster_qb = ["N/A", "3 - Leonardo Garza", "10 - Emiliano Sánchez", "17 - Jorge Corona"]
+if 'roster_rb' not in st.session_state: st.session_state.roster_rb = ["N/A", "23 - Rodrigo Pérez", "26 - Luis Schrader", "32 - Alonso Báez", "34 - Emilio Melo", "35 - Hussein Santillán", "44 - Manlio Hernández"]
+if 'roster_wr' not in st.session_state: st.session_state.roster_wr = ["N/A", "1 - Raúl Blanco", "12 - Christopher Cardona", "13 - Javier Vivas", "14 - Luis Medrano", "18 - Jahdiel Ponce", "81 - César Román", "82 - Jonathan Reyes", "83 - Ángel Reyes", "84 - Bruno Granados", "88 - Kin Villafuerte", "98 - Óscar Miranda"]
+if 'roster_pb' not in st.session_state: st.session_state.roster_pb = ["5 - Julio Hernández", "25 - Diego Cerda", "80 - Alan Mariano", "87 - Emiliano Zamora"]
+if 'roster_def' not in st.session_state: st.session_state.roster_def = [
+    "N/A", "0 - Jioshi Morrison", "2 - Aarón Soriano", "4 - Diego Mercado", "6 - Abraham González", "7 - Luis Bañuelos", 
+    "8 - Luis Higelin", "9 - Joaquín Carriles", "11 - Raymundo Liceá", "15 - Emiliano Álvarez", "16 - Ian Aguilar", 
+    "19 - Jirvan Velasco", "21 - Armando Moreno", "22 - Juan Acosta", "24 - David Ceballos", "27 - Rodrigo Villegas", 
+    "28 - Sergio Cervantes", "29 - Santiago Juárez", "30 - Néstor Cabrera", "31 - Juan Arreola", "33 - Diego Bañuelos", 
+    "39 - Santiago Saldaña", "40 - Yeshua Ocampo", "42 - Alexis Trejo", "43 - Erick Rodríguez", "52 - Diego Contreras", 
+    "59 - Óscar González", "90 - Rafael Saavedra", "91 - Miguel Martínez", "92 - Sergio Bautista", "94 - Juan Soriano", 
     "95 - Saul Bautista", "99 - José Valdéz"
 ]
 
-WR_LIMPIO = [x for x in LISTA_WR if x != "N/A"]
-RB_LIMPIO = [x for x in LISTA_RB if x != "N/A"]
+WR_LIMPIO = [x for x in st.session_state.roster_wr if x != "N/A"]
+RB_LIMPIO = [x for x in st.session_state.roster_rb if x != "N/A"]
 
-# Menús estrictos por posición + "Otro..." al final
-PASADORES = LISTA_QB + ["Otro..."]
-CORREDORES = LISTA_RB + ["Otro..."]
-# Receptores incluye a los WR, a los RB (Corredores) y a los PB
-RECEPTORES = LISTA_WR + RB_LIMPIO + LISTA_PB + ["Otro..."]
-LISTA_DEFENSA = LISTA_DEFENSA_BASE + ["Otro..."]
+PASADORES = st.session_state.roster_qb + ["Otro..."]
+CORREDORES = st.session_state.roster_rb + ["Otro..."]
+RECEPTORES = st.session_state.roster_wr + RB_LIMPIO + st.session_state.roster_pb + ["Otro..."]
+LISTA_DEFENSA = st.session_state.roster_def + ["Otro..."]
+
+# Reinicio seguro de selecciones
+for key in ['passer_sel', 'receiver_sel', 'runner_sel', 'd1_sel', 'd2_sel']:
+    if key not in st.session_state: st.session_state[key] = "N/A"
 
 # --- 3. HEADER COMPACTO ---
 col_tit, col_per, col_dwn, col_num = st.columns([1.2, 1.4, 0.7, 0.7])
 with col_tit:
     st.markdown("<h2 style='margin-top:-10px;'>🏈 Pumas CU Scout</h2>", unsafe_allow_html=True)
 with col_per:
-    periodo_actual = st.selectbox("⏱️ PERIODO", ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"])
+    periodo_base = st.selectbox("⏱️ PERIODO", ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"])
+    # Text input dinámico para "OTRO"
+    if periodo_base == "OTRO":
+        periodo_actual = st.text_input("Nombre del periodo", placeholder="Ej: Especiales", label_visibility="collapsed")
+        if not periodo_actual: periodo_actual = "OTRO"
+    else:
+        periodo_actual = periodo_base
+
 with col_dwn:
     down_drill = st.selectbox("🎯 DOWN DRILL", ["N/A", "1D", "2D", "3D", "4D"])
 with col_num:
@@ -198,7 +204,6 @@ with col_cen:
         if st.button("🏈 Pase", type="primary" if st.session_state.resultado == "Pass" else "secondary", use_container_width=True): st.session_state.resultado = "Pass"; st.rerun()
         if st.button("🏃‍♂️ Scramble", type="primary" if st.session_state.resultado == "Scramble" else "secondary", use_container_width=True): st.session_state.resultado = "Scramble"; st.rerun()
         if st.button("💥 Sack", type="primary" if st.session_state.resultado == "Sack" else "secondary", use_container_width=True): st.session_state.resultado = "Sack"; st.rerun()
-        # NUEVO BOTÓN: Drop
         if st.button("👐 Drop", type="primary" if st.session_state.resultado == "Drop" else "secondary", use_container_width=True): st.session_state.resultado = "Drop"; st.rerun()
     with r2:
         if st.button("🏃 Carrera", type="primary" if st.session_state.resultado == "Rush" else "secondary", use_container_width=True): st.session_state.resultado = "Rush"; st.rerun()
@@ -206,31 +211,36 @@ with col_cen:
         if st.button("🦅 INT", type="primary" if st.session_state.resultado == "Interception" else "secondary", use_container_width=True): st.session_state.resultado = "Interception"; st.rerun()
     
     st.markdown("<br>", unsafe_allow_html=True)
-    passer, runner, receiver = "N/A", "N/A", "N/A"
     
-    # Lógica de Inputs Dinámicos para "Otro..."
+    # Selectores dinámicos vinculados a Session State
     if st.session_state.resultado in ["Pass", "Incompleto", "Interception", "Drop"]:
-        passer_sel = st.selectbox("🎯 QB", PASADORES)
-        passer = st.text_input("Escribe el QB", key="qb_otro", label_visibility="collapsed") if passer_sel == "Otro..." else passer_sel
-        
-        receiver_sel = st.selectbox("👐 Receptor", RECEPTORES)
-        receiver = st.text_input("Escribe el Receptor", key="rec_otro", label_visibility="collapsed") if receiver_sel == "Otro..." else receiver_sel
-        
+        st.selectbox("🎯 QB", PASADORES, key="passer_sel")
+        if st.session_state.passer_sel == "Otro...":
+            st.text_input("Ingresa el QB (Ej: 99 - Perez)", key="qb_otro", label_visibility="collapsed")
+            
+        st.selectbox("👐 Receptor", RECEPTORES, key="receiver_sel")
+        if st.session_state.receiver_sel == "Otro...":
+            st.text_input("Ingresa el Receptor", key="rec_otro", label_visibility="collapsed")
+            
     elif st.session_state.resultado == "Rush":
-        runner_sel = st.selectbox("💨 Corredor", CORREDORES)
-        runner = st.text_input("Escribe el Corredor", key="run_otro", label_visibility="collapsed") if runner_sel == "Otro..." else runner_sel
+        st.selectbox("💨 Corredor", CORREDORES, key="runner_sel")
+        if st.session_state.runner_sel == "Otro...":
+            st.text_input("Ingresa el Corredor", key="run_otro", label_visibility="collapsed")
         st.write("") 
         
     elif st.session_state.resultado in ["Scramble", "Sack"]:
-        passer_sel = st.selectbox("🎯 QB", PASADORES)
-        passer = st.text_input("Escribe el QB", key="qb_otro2", label_visibility="collapsed") if passer_sel == "Otro..." else passer_sel
+        st.selectbox("🎯 QB", PASADORES, key="passer_sel")
+        if st.session_state.passer_sel == "Otro...":
+            st.text_input("Ingresa el QB", key="qb_otro", label_visibility="collapsed")
         st.write("")
 
-    d1_sel = st.selectbox("💥 Tackle principal / Pase Def.", LISTA_DEFENSA)
-    defensor_1 = st.text_input("Escribe Tackle 1", key="d1_otro", label_visibility="collapsed") if d1_sel == "Otro..." else d1_sel
-    
-    d2_sel = st.selectbox("🤝 Asistencia (Opcional)", LISTA_DEFENSA)
-    defensor_2 = st.text_input("Escribe Tackle 2", key="d2_otro", label_visibility="collapsed") if d2_sel == "Otro..." else d2_sel
+    st.selectbox("💥 Tackle principal / Pase Def.", LISTA_DEFENSA, key="d1_sel")
+    if st.session_state.d1_sel == "Otro...":
+        st.text_input("Ingresa Tackle 1", key="d1_otro", label_visibility="collapsed")
+        
+    st.selectbox("🤝 Asistencia (Opcional)", LISTA_DEFENSA, key="d2_sel")
+    if st.session_state.d2_sel == "Otro...":
+        st.text_input("Ingresa Tackle 2", key="d2_otro", label_visibility="collapsed")
 
 # ==========================================
 # COLUMNA DERECHA: CIERRE Y GUARDADO
@@ -241,7 +251,7 @@ with col_der:
     distancia_al_td = (100 - st.session_state.yarda_actual) if st.session_state.territorio == "Propio" else st.session_state.yarda_actual
 
     st.markdown('<div class="btn-guardar">', unsafe_allow_html=True)
-    if st.button("❌ 0 Yds (Incompleto/Línea/Drop)", use_container_width=True): ganancia_final = 0
+    if st.button("❌ 0 Yds (Incompleto/Drop/Línea)", use_container_width=True): ganancia_final = 0
     if st.button("➕ +3 Yds", use_container_width=True): ganancia_final = 3
     if st.button("➕ +5 Yds", use_container_width=True): ganancia_final = 5
     if st.button(f"🚀 1er Down (+{st.session_state.distancia})", use_container_width=True): ganancia_final = st.session_state.distancia
@@ -259,10 +269,29 @@ with col_der:
 
 # --- MOTOR LÓGICO Y MATEMÁTICO ---
 if ganancia_final is not None:
-    # Fuerza a 0 yardas si fue Incompleto o Drop, para evitar errores de captura
+    # 1. Recuperar valores de jugadores (del select o del texto libre)
+    p_sel = st.session_state.get('passer_sel', 'N/A')
+    r_sel = st.session_state.get('receiver_sel', 'N/A')
+    rn_sel = st.session_state.get('runner_sel', 'N/A')
+    d1_s = st.session_state.get('d1_sel', 'N/A')
+    d2_s = st.session_state.get('d2_sel', 'N/A')
+
+    p_val = st.session_state.get('qb_otro', '') if p_sel == "Otro..." else p_sel
+    r_val = st.session_state.get('rec_otro', '') if r_sel == "Otro..." else r_sel
+    rn_val = st.session_state.get('run_otro', '') if rn_sel == "Otro..." else rn_sel
+    d1_val = st.session_state.get('d1_otro', '') if d1_s == "Otro..." else d1_s
+    d2_val = st.session_state.get('d2_otro', '') if d2_s == "Otro..." else d2_s
+
+    # 2. Agregar al roster en memoria si son nuevos
+    if p_sel == "Otro..." and p_val and p_val not in st.session_state.roster_qb: st.session_state.roster_qb.append(p_val)
+    if r_sel == "Otro..." and r_val and r_val not in st.session_state.roster_wr: st.session_state.roster_wr.append(r_val)
+    if rn_sel == "Otro..." and rn_val and rn_val not in st.session_state.roster_rb: st.session_state.roster_rb.append(rn_val)
+    if d1_s == "Otro..." and d1_val and d1_val not in st.session_state.roster_def: st.session_state.roster_def.append(d1_val)
+    if d2_s == "Otro..." and d2_val and d2_val not in st.session_state.roster_def: st.session_state.roster_def.append(d2_val)
+
+    # 3. Lógica de ganancia
     if st.session_state.resultado in ["Incompleto", "Drop"]: 
         ganancia_final = 0
-        
     if st.session_state.resultado == "Sack" and ganancia_final > 0: 
         ganancia_final = -ganancia_final 
     
@@ -272,13 +301,26 @@ if ganancia_final is not None:
         ganancia_final = distancia_al_td 
         
     resultado_str = st.session_state.resultado + (" TD" if is_td else "")
-    yard_str = "50" if st.session_state.yarda_actual == 50 else f"{st.session_state.territorio[0]}{st.session_state.yarda_actual}"
+    
+    # 4. Yardas formato negativo en Propia, normal en Rival (Hudl format)
+    if st.session_state.yarda_actual == 50:
+        yard_str = "50"
+    else:
+        yard_str = f"-{st.session_state.yarda_actual}" if st.session_state.territorio == "Propio" else f"{st.session_state.yarda_actual}"
+    
+    # 5. Columna PLAY TYPE
+    play_type_str = "Run" if st.session_state.resultado == "Rush" else "Pass"
     
     titulo_exportacion = f"{periodo_actual} {down_drill}" if down_drill != "N/A" else periodo_actual
+    
+    # Función para dejar solo el número de jersey
+    def get_num(name):
+        return name.split(" - ")[0] if name not in ["N/A", ""] else ""
     
     nueva_jugada = {
         "TITLE": titulo_exportacion,  
         "PLAY #": len(st.session_state.lista_jugadas) + 1,
+        "PLAY TYPE": play_type_str,
         "DIRECTION": st.session_state.direccion_actual, 
         "HASH": st.session_state.hash_mark, 
         "YARD LN": yard_str, 
@@ -286,15 +328,15 @@ if ganancia_final is not None:
         "DIST": st.session_state.distancia,        
         "RESULT": resultado_str, 
         "GAIN/LS": ganancia_final,
-        # Guarda el número de jersey extraído o el texto libre si se seleccionó "Otro..."
-        "RUNNER": runner.split(" - ")[0] if runner not in ["N/A", ""] else "",
-        "RECEIVER": receiver.split(" - ")[0] if receiver not in ["N/A", ""] else "",
-        "PASSER": passer.split(" - ")[0] if passer not in ["N/A", ""] else "",
-        "TACKLER 1": defensor_1.split(" - ")[0] if defensor_1 not in ["N/A", ""] else "",
-        "TACKLER 2": defensor_2.split(" - ")[0] if defensor_2 not in ["N/A", ""] else ""
+        "RUNNER": get_num(rn_val),
+        "RECEIVER": get_num(r_val),
+        "PASSER": get_num(p_val),
+        "TACKLER 1": get_num(d1_val),
+        "TACKLER 2": get_num(d2_val)
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
+    # 6. Modo Drive automotizado
     if st.session_state.modo_avance == "🏈 Drive":
         if st.session_state.resultado in ["Interception", "Drop", "Incompleto"] or is_td:
             st.session_state.down = 1
@@ -325,6 +367,19 @@ if ganancia_final is not None:
                 st.session_state.yarda_actual = 100 - new_abs
                 
     st.session_state.msg_exito = f"¡Jugada {len(st.session_state.lista_jugadas)} guardada! Avance: {ganancia_final} yds."
+    
+    # 7. REINICIO DE MENÚS AL GUARDAR (Autolavado)
+    st.session_state.passer_sel = "N/A"
+    st.session_state.receiver_sel = "N/A"
+    st.session_state.runner_sel = "N/A"
+    st.session_state.d1_sel = "N/A"
+    st.session_state.d2_sel = "N/A"
+    if 'qb_otro' in st.session_state: st.session_state.qb_otro = ""
+    if 'rec_otro' in st.session_state: st.session_state.rec_otro = ""
+    if 'run_otro' in st.session_state: st.session_state.run_otro = ""
+    if 'd1_otro' in st.session_state: st.session_state.d1_otro = ""
+    if 'd2_otro' in st.session_state: st.session_state.d2_otro = ""
+    
     st.rerun() 
 
 st.markdown("---")
