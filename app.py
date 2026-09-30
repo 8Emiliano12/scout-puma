@@ -100,9 +100,10 @@ if 'hash_mark' not in st.session_state: st.session_state.hash_mark = "M"
 # Contador de reset para renovar los widgets limpios al guardar
 if 'reset_count' not in st.session_state: st.session_state.reset_count = 0
 
-# Variables de sesión para header
-if 'periodo_base' not in st.session_state: st.session_state.periodo_base = "TEAM"
-if 'down_drill' not in st.session_state: st.session_state.down_drill = "N/A"
+# Variables de sesión para header sincronizadas
+if 'periodo_base_sel' not in st.session_state: st.session_state.periodo_base_sel = "TEAM"
+if 'down_drill_sel' not in st.session_state: st.session_state.down_drill_sel = "N/A"
+if 'per_otro' not in st.session_state: st.session_state.per_otro = ""
 
 # Rosters
 if 'roster_qb' not in st.session_state: st.session_state.roster_qb = ["N/A", "3 - Leonardo Garza", "10 - Emiliano Sánchez", "17 - Jorge Corona"]
@@ -151,17 +152,19 @@ col_tit, col_per, col_dwn, col_num = st.columns([1.2, 1.4, 0.7, 0.7])
 with col_tit:
     st.markdown("<h2 style='margin-top:-10px;'>🏈 Pumas CU Scout</h2>", unsafe_allow_html=True)
 with col_per:
-    with st.popover(f"⏱️️ {st.session_state.periodo_base}", use_container_width=True):
-        st.session_state.periodo_base = st.radio("Periodo", ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"], label_visibility="collapsed")
-        if st.session_state.periodo_base == "OTRO":
-            periodo_actual = st.text_input("Nombre de la práctica", key="per_otro", placeholder="Ej: Especiales")
-            if not periodo_actual: periodo_actual = "OTRO"
-        else:
-            periodo_actual = st.session_state.periodo_base
+    with st.popover(f"⏱ {st.session_state.periodo_base_sel}", use_container_width=True):
+        st.radio("Periodo", ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"], key="periodo_base_sel", label_visibility="collapsed")
+        if st.session_state.periodo_base_sel == "OTRO":
+            st.text_input("Nombre de la práctica", key="per_otro", placeholder="Ej: Especiales")
+            
+    if st.session_state.periodo_base_sel == "OTRO" and st.session_state.per_otro:
+        periodo_actual = st.session_state.per_otro
+    else:
+        periodo_actual = st.session_state.periodo_base_sel
 
 with col_dwn:
-    with st.popover(f"🎯 {st.session_state.down_drill}", use_container_width=True):
-        st.session_state.down_drill = st.radio("Drill", ["N/A", "1D", "2D", "3D", "4D"], label_visibility="collapsed")
+    with st.popover(f"🎯 {st.session_state.down_drill_sel}", use_container_width=True):
+        st.radio("Drill", ["N/A", "1D", "2D", "3D", "4D"], key="down_drill_sel", label_visibility="collapsed")
 
 with col_num:
     st.metric("JUGADA", len(st.session_state.lista_jugadas) + 1)
@@ -313,7 +316,6 @@ if ganancia_final is not None:
     d1_val = st.session_state.get(k_d1_otro, '') if d1_s == "Otro..." else d1_s
     d2_val = st.session_state.get(k_d2_otro, '') if d2_s == "Otro..." else d2_s
 
-    # Incorporar al roster persistente si escribieron uno nuevo
     if p_sel == "Otro..." and p_val and p_val not in st.session_state.roster_qb: st.session_state.roster_qb.append(p_val)
     if r_sel == "Otro..." and r_val and r_val not in st.session_state.roster_wr: st.session_state.roster_wr.append(r_val)
     if rn_sel == "Otro..." and rn_val and rn_val not in st.session_state.roster_rb: st.session_state.roster_rb.append(rn_val)
@@ -338,7 +340,7 @@ if ganancia_final is not None:
         yard_str = f"-{st.session_state.yarda_actual}" if st.session_state.territorio == "Propio" else f"{st.session_state.yarda_actual}"
     
     play_type_str = "Run" if st.session_state.resultado == "Rush" else "Pass"
-    titulo_exportacion = f"{periodo_actual} {st.session_state.down_drill}" if st.session_state.down_drill != "N/A" else periodo_actual
+    titulo_exportacion = f"{periodo_actual} {st.session_state.down_drill_sel}" if st.session_state.down_drill_sel != "N/A" else periodo_actual
     
     def get_num(name):
         return name.split(" - ")[0] if name not in ["N/A", ""] else ""
@@ -362,10 +364,23 @@ if ganancia_final is not None:
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
+    # 6. Modo Drive automático con cambio de dirección inteligente
     if st.session_state.modo_avance == "🏈 Drive":
+        cambio_de_posesion = False
+        
         if st.session_state.resultado in ["Interception", "Drop", "Incompleto"] or is_td:
-            st.session_state.down = 1
-            st.session_state.distancia = 10
+            if st.session_state.resultado == "Interception" or is_td:
+                st.session_state.down = 1
+                st.session_state.distancia = 10
+                cambio_de_posesion = True
+            else:
+                # Si fue incompleto o drop en 4to down, es cambio de posesión
+                st.session_state.down += 1
+                st.session_state.distancia -= ganancia_final
+                if st.session_state.down > 4:
+                    st.session_state.down = 1
+                    st.session_state.distancia = 10
+                    cambio_de_posesion = True
         else:
             if ganancia_final >= st.session_state.distancia:
                 st.session_state.down = 1
@@ -376,6 +391,7 @@ if ganancia_final is not None:
                 if st.session_state.down > 4:
                     st.session_state.down = 1
                     st.session_state.distancia = 10
+                    cambio_de_posesion = True
                     
         abs_yard = st.session_state.yarda_actual if st.session_state.territorio == "Propio" else 100 - st.session_state.yarda_actual
         new_abs = abs_yard + ganancia_final
@@ -391,9 +407,12 @@ if ganancia_final is not None:
                 st.session_state.territorio = "Rival"
                 st.session_state.yarda_actual = 100 - new_abs
                 
+        # Invertir dirección automáticamente si se acabó el drive
+        if cambio_de_posesion:
+            st.session_state.direccion_actual = "Canchas" if st.session_state.direccion_actual == "Alberca" else "Alberca"
+                
     st.session_state.msg_exito = f"¡Jugada {len(st.session_state.lista_jugadas)} guardada! Avance: {ganancia_final} yds."
     
-    # Incremento de versión para limpiar todos los menús automáticamente sin colisión
     st.session_state.reset_count += 1
     st.rerun() 
 
@@ -405,7 +424,7 @@ if st.session_state.lista_jugadas:
         df_jugadas = pd.DataFrame(st.session_state.lista_jugadas)
         fecha_hoy = datetime.now().strftime("%d-%m-%Y")
         
-        str_down = st.session_state.down_drill.replace("D", "down") if st.session_state.down_drill != "N/A" else ""
+        str_down = st.session_state.down_drill_sel.replace("D", "down") if st.session_state.down_drill_sel != "N/A" else ""
         nombre_descarga = f"{periodo_actual} {str_down} {fecha_hoy}".strip().replace("  ", " ")
         
         c_csv, c_excel, c_del = st.columns(3)
