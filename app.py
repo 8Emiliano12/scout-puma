@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import io
 from datetime import datetime
@@ -62,6 +63,30 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- 1.5 SCRIPT PARA BLOQUEAR EL TECLADO VIRTUAL EN TABLETS ---
+components.html(
+    """
+    <script>
+    const doc = window.parent.document;
+    function disableKeyboard() {
+        const inputs = doc.querySelectorAll('div[data-baseweb="select"] input');
+        inputs.forEach(inp => {
+            if (!inp.hasAttribute('readonly')) {
+                inp.setAttribute('readonly', 'true');
+                inp.setAttribute('inputmode', 'none');
+                inp.setAttribute('autocomplete', 'off'); 
+            }
+        });
+    }
+    const observer = new MutationObserver(disableKeyboard);
+    observer.observe(doc.body, { childList: true, subtree: true });
+    disableKeyboard();
+    </script>
+    """,
+    height=0,
+    width=0
+)
+
 # --- 2. INICIALIZACIÓN DE MEMORIA Y ROSTERS DINÁMICOS ---
 if 'lista_jugadas' not in st.session_state: st.session_state.lista_jugadas = []
 if 'yarda_actual' not in st.session_state: st.session_state.yarda_actual = 20
@@ -77,6 +102,8 @@ if 'hash_mark' not in st.session_state: st.session_state.hash_mark = "M"
 # Variables de selección de menús
 if 'periodo_base' not in st.session_state: st.session_state.periodo_base = "TEAM"
 if 'down_drill' not in st.session_state: st.session_state.down_drill = "N/A"
+
+# --- AQUI ESTA LA CLAVE DEL ARREGLO: Inicializar las llaves de los menús ---
 if 'passer_sel' not in st.session_state: st.session_state.passer_sel = "N/A"
 if 'receiver_sel' not in st.session_state: st.session_state.receiver_sel = "N/A"
 if 'runner_sel' not in st.session_state: st.session_state.runner_sel = "N/A"
@@ -199,39 +226,39 @@ with col_cen:
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # MENÚS CON POPOVER (Botones 100% inmunes al teclado del iPad)
+    # MENÚS CON POPOVER CORREGIDOS (Sincronización instantánea)
     if st.session_state.resultado in ["Pass", "Incompleto", "Interception", "Drop"]:
         with st.popover(f"🎯 QB: {st.session_state.passer_sel}", use_container_width=True):
-            st.session_state.passer_sel = st.radio("QB", PASADORES, label_visibility="collapsed")
+            st.radio("QB", PASADORES, key="passer_sel", label_visibility="collapsed")
             if st.session_state.passer_sel == "Otro...":
                 st.text_input("Ingresa el QB", key="qb_otro")
                 
         with st.popover(f"👐 Rec: {st.session_state.receiver_sel}", use_container_width=True):
-            st.session_state.receiver_sel = st.radio("Receptor", RECEPTORES, label_visibility="collapsed")
+            st.radio("Receptor", RECEPTORES, key="receiver_sel", label_visibility="collapsed")
             if st.session_state.receiver_sel == "Otro...":
                 st.text_input("Ingresa Receptor", key="rec_otro")
             
     elif st.session_state.resultado == "Rush":
         with st.popover(f"💨 RB: {st.session_state.runner_sel}", use_container_width=True):
-            st.session_state.runner_sel = st.radio("Corredor", CORREDORES, label_visibility="collapsed")
+            st.radio("Corredor", CORREDORES, key="runner_sel", label_visibility="collapsed")
             if st.session_state.runner_sel == "Otro...":
                 st.text_input("Ingresa el Corredor", key="run_otro")
         st.write("") 
         
     elif st.session_state.resultado in ["Scramble", "Sack"]:
         with st.popover(f"🎯 QB: {st.session_state.passer_sel}", use_container_width=True):
-            st.session_state.passer_sel = st.radio("QB", PASADORES, label_visibility="collapsed")
+            st.radio("QB", PASADORES, key="passer_sel", label_visibility="collapsed")
             if st.session_state.passer_sel == "Otro...":
                 st.text_input("Ingresa el QB", key="qb_otro")
         st.write("")
 
     with st.popover(f"💥 TKL 1: {st.session_state.d1_sel}", use_container_width=True):
-        st.session_state.d1_sel = st.radio("Tackle 1", LISTA_DEFENSA, label_visibility="collapsed")
+        st.radio("Tackle 1", LISTA_DEFENSA, key="d1_sel", label_visibility="collapsed")
         if st.session_state.d1_sel == "Otro...":
             st.text_input("Ingresa Tackle 1", key="d1_otro")
             
     with st.popover(f"🤝 TKL 2: {st.session_state.d2_sel}", use_container_width=True):
-        st.session_state.d2_sel = st.radio("Tackle 2", LISTA_DEFENSA, label_visibility="collapsed")
+        st.radio("Tackle 2", LISTA_DEFENSA, key="d2_sel", label_visibility="collapsed")
         if st.session_state.d2_sel == "Otro...":
             st.text_input("Ingresa Tackle 2", key="d2_otro")
 
@@ -360,12 +387,17 @@ if ganancia_final is not None:
                 
     st.session_state.msg_exito = f"¡Jugada {len(st.session_state.lista_jugadas)} guardada! Avance: {ganancia_final} yds."
     
-    # 7. REINICIO DE MENÚS AL GUARDAR (Autolavado)
+    # 7. REINICIO DE MENÚS AL GUARDAR (Autolavado seguro usando key updates directos a st.session_state)
     st.session_state.passer_sel = "N/A"
     st.session_state.receiver_sel = "N/A"
     st.session_state.runner_sel = "N/A"
     st.session_state.d1_sel = "N/A"
     st.session_state.d2_sel = "N/A"
+    if 'qb_otro' in st.session_state: st.session_state.qb_otro = ""
+    if 'rec_otro' in st.session_state: st.session_state.rec_otro = ""
+    if 'run_otro' in st.session_state: st.session_state.run_otro = ""
+    if 'd1_otro' in st.session_state: st.session_state.d1_otro = ""
+    if 'd2_otro' in st.session_state: st.session_state.d2_otro = ""
     
     st.rerun() 
 
