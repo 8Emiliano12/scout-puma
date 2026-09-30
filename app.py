@@ -252,7 +252,6 @@ with col_cen:
             if st.session_state[k_receiver] == "Otro...":
                 st.text_input("Ingresa Receptor", key=k_rec_otro)
                 
-        # NUEVO MENÚ: Sólo aparece si la jugada fue Intercepción
         if st.session_state.resultado == "Interception":
             with st.popover(f"🦅 INT Por: {st.session_state[k_int]}", use_container_width=True):
                 st.radio("Interceptor", LISTA_DEFENSA, key=k_int, label_visibility="collapsed")
@@ -341,36 +340,56 @@ if ganancia_final is not None:
         is_td = True
         ganancia_final = distancia_al_td 
         
-    resultado_str = st.session_state.resultado + (" TD" if is_td else "")
+    # Mapeo de términos de App a Hudl Standard
+    hudl_results_map = {
+        "Pass": "Complete",
+        "Incompleto": "Incomplete",
+        "Drop": "Dropped",
+        "Rush": "Rush",
+        "Scramble": "Scramble",
+        "Sack": "Sack",
+        "Interception": "Interception"
+    }
+    base_res = hudl_results_map.get(st.session_state.resultado, st.session_state.resultado)
+    resultado_str = base_res + (" TD" if is_td else "")
     
-    if st.session_state.yarda_actual == 50:
-        yard_str = "50"
-    else:
-        yard_str = f"-{st.session_state.yarda_actual}" if st.session_state.territorio == "Propio" else f"{st.session_state.yarda_actual}"
-    
-    play_type_str = "Run" if st.session_state.resultado == "Rush" else "Pass"
+    play_type_str = "Run" if st.session_state.resultado in ["Rush", "Scramble"] else "Pass"
     titulo_exportacion = f"{periodo_actual} {st.session_state.down_drill_sel}" if st.session_state.down_drill_sel != "N/A" else periodo_actual
     
+    # Función para extraer el número y agregarle el '#' como en Hudl
     def get_num(name):
-        return name.split(" - ")[0] if name not in ["N/A", ""] else ""
+        val = name.split(" - ")[0] if name not in ["N/A", ""] else ""
+        return f"#{val}" if val else ""
     
+    # ESTRUCTURA EXACTA A LA IMAGEN DE HUDL
     nueva_jugada = {
         "TITLE": titulo_exportacion,  
         "PLAY #": len(st.session_state.lista_jugadas) + 1,
-        "PLAY TYPE": play_type_str,
-        "DIRECTION": st.session_state.direccion_actual, 
-        "HASH": st.session_state.hash_mark, 
-        "YARD LN": yard_str, 
-        "DOWN": st.session_state.down,
+        "ODK": "",
+        "QTR": "",
+        "DN": st.session_state.down,
         "DIST": st.session_state.distancia,        
+        "YARD LN": st.session_state.yarda_actual if st.session_state.yarda_actual == 50 else (f"-{st.session_state.yarda_actual}" if st.session_state.territorio == "Propio" else f"{st.session_state.yarda_actual}"),
+        "HASH": st.session_state.hash_mark, 
+        "PERSONNEL": "",
+        "OFF FORM": "",
+        "MOTION": "",
+        "OFF PLAY": "",
+        "PASS CONCEPT": "",
+        "PLAY TYPE": play_type_str,
+        "GN/LS": ganancia_final,
         "RESULT": resultado_str, 
-        "GAIN/LS": ganancia_final,
-        "RUNNER": get_num(rn_val),
-        "RECEIVER": get_num(r_val),
+        "PENALTY": "",
         "PASSER": get_num(p_val),
-        "INTERCEPTOR": get_num(int_val) if st.session_state.resultado == "Interception" else "",
-        "TACKLER 1": get_num(d1_val),
-        "TACKLER 2": get_num(d2_val)
+        "RECEIVER": get_num(r_val),
+        "RUSHER": get_num(rn_val),
+        "PASS ZONE": "",
+        "COMPLETO DBS": "",
+        "INTERCEPTED BY": get_num(int_val) if st.session_state.resultado == "Interception" else "",
+        "TACKLER1": get_num(d1_val),
+        "TACKLER": get_num(d2_val),
+        "OBJETIVO OFF": "",
+        "DIRECTION": st.session_state.direccion_actual
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
