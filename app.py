@@ -97,15 +97,12 @@ if 'resultado' not in st.session_state: st.session_state.resultado = "Pass"
 if 'direccion_actual' not in st.session_state: st.session_state.direccion_actual = "Alberca"
 if 'hash_mark' not in st.session_state: st.session_state.hash_mark = "M"
 
-# Contador de reset para renovar los widgets limpios al guardar
 if 'reset_count' not in st.session_state: st.session_state.reset_count = 0
 
-# Variables de sesión para header sincronizadas
 if 'periodo_base_sel' not in st.session_state: st.session_state.periodo_base_sel = "TEAM"
 if 'down_drill_sel' not in st.session_state: st.session_state.down_drill_sel = "N/A"
 if 'per_otro' not in st.session_state: st.session_state.per_otro = ""
 
-# Rosters
 if 'roster_qb' not in st.session_state: st.session_state.roster_qb = ["N/A", "3 - Leonardo Garza", "10 - Emiliano Sánchez", "17 - Jorge Corona"]
 if 'roster_rb' not in st.session_state: st.session_state.roster_rb = ["N/A", "23 - Rodrigo Pérez", "26 - Luis Schrader", "32 - Alonso Báez", "34 - Emilio Melo", "35 - Hussein Santillán", "44 - Manlio Hernández"]
 if 'roster_wr' not in st.session_state: st.session_state.roster_wr = ["N/A", "1 - Raúl Blanco", "12 - Christopher Cardona", "13 - Javier Vivas", "14 - Luis Medrano", "18 - Jahdiel Ponce", "81 - César Román", "82 - Jonathan Reyes", "83 - Ángel Reyes", "84 - Bruno Granados", "88 - Kin Villafuerte", "98 - Óscar Miranda"]
@@ -128,22 +125,24 @@ CORREDORES = st.session_state.roster_rb + ["Otro..."]
 RECEPTORES = st.session_state.roster_wr + RB_LIMPIO + st.session_state.roster_pb + ["Otro..."]
 LISTA_DEFENSA = st.session_state.roster_def + ["Otro..."]
 
-# Claves dinámicas de los widgets para el ciclo actual
 rc = st.session_state.reset_count
 k_passer = f"passer_sel_{rc}"
 k_receiver = f"receiver_sel_{rc}"
 k_runner = f"runner_sel_{rc}"
+k_int = f"int_sel_{rc}"
 k_d1 = f"d1_sel_{rc}"
 k_d2 = f"d2_sel_{rc}"
 k_qb_otro = f"qb_otro_{rc}"
 k_rec_otro = f"rec_otro_{rc}"
 k_run_otro = f"run_otro_{rc}"
+k_int_otro = f"int_otro_{rc}"
 k_d1_otro = f"d1_otro_{rc}"
 k_d2_otro = f"d2_otro_{rc}"
 
 if k_passer not in st.session_state: st.session_state[k_passer] = "N/A"
 if k_receiver not in st.session_state: st.session_state[k_receiver] = "N/A"
 if k_runner not in st.session_state: st.session_state[k_runner] = "N/A"
+if k_int not in st.session_state: st.session_state[k_int] = "N/A"
 if k_d1 not in st.session_state: st.session_state[k_d1] = "N/A"
 if k_d2 not in st.session_state: st.session_state[k_d2] = "N/A"
 
@@ -252,6 +251,13 @@ with col_cen:
             st.radio("Receptor", RECEPTORES, key=k_receiver, label_visibility="collapsed")
             if st.session_state[k_receiver] == "Otro...":
                 st.text_input("Ingresa Receptor", key=k_rec_otro)
+                
+        # NUEVO MENÚ: Sólo aparece si la jugada fue Intercepción
+        if st.session_state.resultado == "Interception":
+            with st.popover(f"🦅 INT Por: {st.session_state[k_int]}", use_container_width=True):
+                st.radio("Interceptor", LISTA_DEFENSA, key=k_int, label_visibility="collapsed")
+                if st.session_state[k_int] == "Otro...":
+                    st.text_input("Ingresa Interceptor", key=k_int_otro)
             
     elif st.session_state.resultado == "Rush":
         with st.popover(f"💨 RB: {st.session_state[k_runner]}", use_container_width=True):
@@ -307,18 +313,21 @@ if ganancia_final is not None:
     p_sel = st.session_state.get(k_passer, "N/A")
     r_sel = st.session_state.get(k_receiver, "N/A")
     rn_sel = st.session_state.get(k_runner, "N/A")
+    int_s = st.session_state.get(k_int, "N/A")
     d1_s = st.session_state.get(k_d1, "N/A")
     d2_s = st.session_state.get(k_d2, "N/A")
 
     p_val = st.session_state.get(k_qb_otro, '') if p_sel == "Otro..." else p_sel
     r_val = st.session_state.get(k_rec_otro, '') if r_sel == "Otro..." else r_sel
     rn_val = st.session_state.get(k_run_otro, '') if rn_sel == "Otro..." else rn_sel
+    int_val = st.session_state.get(k_int_otro, '') if int_s == "Otro..." else int_s
     d1_val = st.session_state.get(k_d1_otro, '') if d1_s == "Otro..." else d1_s
     d2_val = st.session_state.get(k_d2_otro, '') if d2_s == "Otro..." else d2_s
 
     if p_sel == "Otro..." and p_val and p_val not in st.session_state.roster_qb: st.session_state.roster_qb.append(p_val)
     if r_sel == "Otro..." and r_val and r_val not in st.session_state.roster_wr: st.session_state.roster_wr.append(r_val)
     if rn_sel == "Otro..." and rn_val and rn_val not in st.session_state.roster_rb: st.session_state.roster_rb.append(rn_val)
+    if int_s == "Otro..." and int_val and int_val not in st.session_state.roster_def: st.session_state.roster_def.append(int_val)
     if d1_s == "Otro..." and d1_val and d1_val not in st.session_state.roster_def: st.session_state.roster_def.append(d1_val)
     if d2_s == "Otro..." and d2_val and d2_val not in st.session_state.roster_def: st.session_state.roster_def.append(d2_val)
 
@@ -359,12 +368,12 @@ if ganancia_final is not None:
         "RUNNER": get_num(rn_val),
         "RECEIVER": get_num(r_val),
         "PASSER": get_num(p_val),
+        "INTERCEPTOR": get_num(int_val) if st.session_state.resultado == "Interception" else "",
         "TACKLER 1": get_num(d1_val),
         "TACKLER 2": get_num(d2_val)
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
-    # 6. Modo Drive automático con cambio de dirección inteligente
     if st.session_state.modo_avance == "🏈 Drive":
         cambio_de_posesion = False
         
@@ -374,7 +383,6 @@ if ganancia_final is not None:
                 st.session_state.distancia = 10
                 cambio_de_posesion = True
             else:
-                # Si fue incompleto o drop en 4to down, es cambio de posesión
                 st.session_state.down += 1
                 st.session_state.distancia -= ganancia_final
                 if st.session_state.down > 4:
@@ -407,7 +415,6 @@ if ganancia_final is not None:
                 st.session_state.territorio = "Rival"
                 st.session_state.yarda_actual = 100 - new_abs
                 
-        # Invertir dirección automáticamente si se acabó el drive
         if cambio_de_posesion:
             st.session_state.direccion_actual = "Canchas" if st.session_state.direccion_actual == "Alberca" else "Alberca"
                 
