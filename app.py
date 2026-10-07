@@ -43,6 +43,14 @@ st.markdown("""
         color: white !important;
         border: none !important;
     }
+    
+    /* Botones más compactos exclusivamente DENTRO de los menús desplegables */
+    div[data-testid="stPopoverBody"] div.stButton > button {
+        font-size: 13.5px !important;
+        height: 45px !important;
+        padding: 0px 5px !important;
+    }
+
     .stTextInput label, .stNumberInput label, .stSlider label {
         font-size: 16px !important;
         font-weight: 800;
@@ -60,30 +68,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-# --- 1.5 SCRIPT PARA BLOQUEAR EL TECLADO VIRTUAL EN TABLETS ---
-components.html(
-    """
-    <script>
-    const doc = window.parent.document;
-    function disableKeyboard() {
-        const inputs = doc.querySelectorAll('div[data-baseweb="select"] input');
-        inputs.forEach(inp => {
-            if (!inp.hasAttribute('readonly')) {
-                inp.setAttribute('readonly', 'true');
-                inp.setAttribute('inputmode', 'none');
-                inp.setAttribute('autocomplete', 'off'); 
-            }
-        });
-    }
-    const observer = new MutationObserver(disableKeyboard);
-    observer.observe(doc.body, { childList: true, subtree: true });
-    disableKeyboard();
-    </script>
-    """,
-    height=0,
-    width=0
-)
 
 # --- 2. INICIALIZACIÓN DE MEMORIA Y ROSTERS DINÁMICOS ---
 if 'lista_jugadas' not in st.session_state: st.session_state.lista_jugadas = []
@@ -120,10 +104,10 @@ if 'roster_def' not in st.session_state: st.session_state.roster_def = [
 WR_LIMPIO = [x for x in st.session_state.roster_wr if x != "N/A"]
 RB_LIMPIO = [x for x in st.session_state.roster_rb if x != "N/A"]
 
-PASADORES = st.session_state.roster_qb + ["Otro..."]
-CORREDORES = st.session_state.roster_rb + ["Otro..."]
-RECEPTORES = st.session_state.roster_wr + RB_LIMPIO + st.session_state.roster_pb + ["Otro..."]
-LISTA_DEFENSA = st.session_state.roster_def + ["Otro..."]
+PASADORES = st.session_state.roster_qb
+CORREDORES = st.session_state.roster_rb
+RECEPTORES = st.session_state.roster_wr + RB_LIMPIO + st.session_state.roster_pb
+LISTA_DEFENSA = st.session_state.roster_def
 
 rc = st.session_state.reset_count
 k_passer = f"passer_sel_{rc}"
@@ -139,12 +123,29 @@ k_int_otro = f"int_otro_{rc}"
 k_d1_otro = f"d1_otro_{rc}"
 k_d2_otro = f"d2_otro_{rc}"
 
-if k_passer not in st.session_state: st.session_state[k_passer] = "N/A"
-if k_receiver not in st.session_state: st.session_state[k_receiver] = "N/A"
-if k_runner not in st.session_state: st.session_state[k_runner] = "N/A"
-if k_int not in st.session_state: st.session_state[k_int] = "N/A"
-if k_d1 not in st.session_state: st.session_state[k_d1] = "N/A"
-if k_d2 not in st.session_state: st.session_state[k_d2] = "N/A"
+for k in [k_passer, k_receiver, k_runner, k_int, k_d1, k_d2]:
+    if k not in st.session_state: st.session_state[k] = "N/A"
+
+# FUNCIÓN MAESTRA PARA MENÚS SÚPER RÁPIDOS
+def render_selector(label_prefix, options, sel_key, txt_key):
+    current_sel = st.session_state[sel_key]
+    with st.popover(f"{label_prefix}: {current_sel}", use_container_width=True):
+        cols = st.columns(2)
+        for i, opt in enumerate(options):
+            btn_type = "primary" if current_sel == opt else "secondary"
+            # Un toque = Selección inmediata y auto-cierre del menú
+            if cols[i % 2].button(opt, key=f"btn_{sel_key}_{i}", type=btn_type, use_container_width=True):
+                st.session_state[sel_key] = opt
+                st.rerun()
+        
+        # El botón de "Otro" abajo a todo lo ancho
+        if st.button("Otro...", key=f"btn_{sel_key}_otro", type="primary" if current_sel == "Otro..." else "secondary", use_container_width=True):
+            st.session_state[sel_key] = "Otro..."
+            st.rerun()
+            
+    # El campo de texto sale debajo del botón si escogió "Otro..."
+    if current_sel == "Otro...":
+        st.text_input("Escribe el Jugador (Ej: 99 - Pérez)", key=txt_key)
 
 # --- 3. HEADER COMPACTO ---
 col_tit, col_per, col_dwn, col_num = st.columns([1.2, 1.4, 0.7, 0.7])
@@ -152,18 +153,22 @@ with col_tit:
     st.markdown("<h2 style='margin-top:-10px;'>🏈 Pumas CU Scout</h2>", unsafe_allow_html=True)
 with col_per:
     with st.popover(f"⏱ {st.session_state.periodo_base_sel}", use_container_width=True):
-        st.radio("Periodo", ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"], key="periodo_base_sel", label_visibility="collapsed")
-        if st.session_state.periodo_base_sel == "OTRO":
-            st.text_input("Nombre de la práctica", key="per_otro", placeholder="Ej: Especiales")
-            
-    if st.session_state.periodo_base_sel == "OTRO" and st.session_state.per_otro:
-        periodo_actual = st.session_state.per_otro
-    else:
-        periodo_actual = st.session_state.periodo_base_sel
+        for p in ["TEAM", "BATTLE DOWN", "SKELL OFENSA", "SKELL DEFENSA", "2DO DOWN RUN FIT", "RED ZONE", "OTRO"]:
+            if st.button(p, key=f"btn_per_{p}", use_container_width=True, type="primary" if st.session_state.periodo_base_sel == p else "secondary"):
+                st.session_state.periodo_base_sel = p
+                st.rerun()
+    if st.session_state.periodo_base_sel == "OTRO":
+        st.text_input("Nombre de la práctica", key="per_otro", placeholder="Ej: Especiales")
+        
+    periodo_actual = st.session_state.per_otro if (st.session_state.periodo_base_sel == "OTRO" and st.session_state.per_otro) else st.session_state.periodo_base_sel
 
 with col_dwn:
     with st.popover(f"🎯 {st.session_state.down_drill_sel}", use_container_width=True):
-        st.radio("Drill", ["N/A", "1D", "2D", "3D", "4D"], key="down_drill_sel", label_visibility="collapsed")
+        cols_dwn = st.columns(2)
+        for i, d_opt in enumerate(["N/A", "1D", "2D", "3D", "4D"]):
+            if cols_dwn[i % 2].button(d_opt, key=f"btn_dwn_{d_opt}", use_container_width=True, type="primary" if st.session_state.down_drill_sel == d_opt else "secondary"):
+                st.session_state.down_drill_sel = d_opt
+                st.rerun()
 
 with col_num:
     st.metric("JUGADA", len(st.session_state.lista_jugadas) + 1)
@@ -242,45 +247,21 @@ with col_cen:
     st.markdown("<br>", unsafe_allow_html=True)
     
     if st.session_state.resultado in ["Pass", "Incompleto", "Interception", "Drop"]:
-        with st.popover(f"🎯 QB: {st.session_state[k_passer]}", use_container_width=True):
-            st.radio("QB", PASADORES, key=k_passer, label_visibility="collapsed")
-            if st.session_state[k_passer] == "Otro...":
-                st.text_input("Ingresa el QB", key=k_qb_otro)
-                
-        with st.popover(f"👐 Rec: {st.session_state[k_receiver]}", use_container_width=True):
-            st.radio("Receptor", RECEPTORES, key=k_receiver, label_visibility="collapsed")
-            if st.session_state[k_receiver] == "Otro...":
-                st.text_input("Ingresa Receptor", key=k_rec_otro)
-                
+        render_selector("🎯 QB", PASADORES, k_passer, k_qb_otro)
+        render_selector("👐 Rec", RECEPTORES, k_receiver, k_rec_otro)
         if st.session_state.resultado == "Interception":
-            with st.popover(f"🦅 INT Por: {st.session_state[k_int]}", use_container_width=True):
-                st.radio("Interceptor", LISTA_DEFENSA, key=k_int, label_visibility="collapsed")
-                if st.session_state[k_int] == "Otro...":
-                    st.text_input("Ingresa Interceptor", key=k_int_otro)
+            render_selector("🦅 INT Por", LISTA_DEFENSA, k_int, k_int_otro)
             
     elif st.session_state.resultado == "Rush":
-        with st.popover(f"💨 RB: {st.session_state[k_runner]}", use_container_width=True):
-            st.radio("Corredor", CORREDORES, key=k_runner, label_visibility="collapsed")
-            if st.session_state[k_runner] == "Otro...":
-                st.text_input("Ingresa el Corredor", key=k_run_otro)
+        render_selector("💨 RB", CORREDORES, k_runner, k_run_otro)
         st.write("") 
         
     elif st.session_state.resultado in ["Scramble", "Sack"]:
-        with st.popover(f"🎯 QB: {st.session_state[k_passer]}", use_container_width=True):
-            st.radio("QB", PASADORES, key=k_passer, label_visibility="collapsed")
-            if st.session_state[k_passer] == "Otro...":
-                st.text_input("Ingresa el QB", key=k_qb_otro)
+        render_selector("🎯 QB", PASADORES, k_passer, k_qb_otro)
         st.write("")
 
-    with st.popover(f"💥 TKL 1: {st.session_state[k_d1]}", use_container_width=True):
-        st.radio("Tackle 1", LISTA_DEFENSA, key=k_d1, label_visibility="collapsed")
-        if st.session_state[k_d1] == "Otro...":
-            st.text_input("Ingresa Tackle 1", key=k_d1_otro)
-            
-    with st.popover(f"🤝 TKL 2: {st.session_state[k_d2]}", use_container_width=True):
-        st.radio("Tackle 2", LISTA_DEFENSA, key=k_d2, label_visibility="collapsed")
-        if st.session_state[k_d2] == "Otro...":
-            st.text_input("Ingresa Tackle 2", key=k_d2_otro)
+    render_selector("💥 TKL 1", LISTA_DEFENSA, k_d1, k_d1_otro)
+    render_selector("🤝 TKL 2", LISTA_DEFENSA, k_d2, k_d2_otro)
 
 # ==========================================
 # COLUMNA DERECHA: RESULTADO Y GUARDAR
@@ -358,12 +339,12 @@ if ganancia_final is not None:
         yard_str = f"-{st.session_state.yarda_actual}" if st.session_state.territorio == "Propio" else f"{st.session_state.yarda_actual}"
     
     play_type_str = "Run" if st.session_state.resultado in ["Rush", "Scramble"] else "Pass"
+    titulo_exportacion = f"{periodo_actual} {st.session_state.down_drill_sel}" if st.session_state.down_drill_sel != "N/A" else periodo_actual
     
     def get_num(name):
         val = name.split(" - ")[0] if name not in ["N/A", ""] else ""
         return f"#{val}" if val else ""
     
-    # ESTRUCTURA EXCLUSIVA Y EXACTA A LA IMAGEN DE HUDL (25 COLUMNAS EXACTAS)
     nueva_jugada = {
         "PLAY #": len(st.session_state.lista_jugadas) + 1,
         "ODK": "",
@@ -395,7 +376,6 @@ if ganancia_final is not None:
     
     if st.session_state.modo_avance == "🏈 Drive":
         cambio_de_posesion = False
-        
         if st.session_state.resultado in ["Interception", "Drop", "Incompleto"] or is_td:
             if st.session_state.resultado == "Interception" or is_td:
                 st.session_state.down = 1
@@ -450,7 +430,6 @@ if st.session_state.lista_jugadas:
         df_jugadas = pd.DataFrame(st.session_state.lista_jugadas)
         fecha_hoy = datetime.now().strftime("%d-%m-%Y")
         
-        titulo_exportacion = f"{periodo_actual} {st.session_state.down_drill_sel}" if st.session_state.down_drill_sel != "N/A" else periodo_actual
         str_down = st.session_state.down_drill_sel.replace("D", "down") if st.session_state.down_drill_sel != "N/A" else ""
         nombre_descarga = f"{periodo_actual} {str_down} {fecha_hoy}".strip().replace("  ", " ")
         
