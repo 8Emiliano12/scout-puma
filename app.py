@@ -340,7 +340,6 @@ if ganancia_final is not None:
         is_td = True
         ganancia_final = distancia_al_td 
         
-    # Mapeo de términos de App a Hudl Standard
     hudl_results_map = {
         "Pass": "Complete",
         "Incompleto": "Incomplete",
@@ -353,23 +352,25 @@ if ganancia_final is not None:
     base_res = hudl_results_map.get(st.session_state.resultado, st.session_state.resultado)
     resultado_str = base_res + (" TD" if is_td else "")
     
-    play_type_str = "Run" if st.session_state.resultado in ["Rush", "Scramble"] else "Pass"
-    titulo_exportacion = f"{periodo_actual} {st.session_state.down_drill_sel}" if st.session_state.down_drill_sel != "N/A" else periodo_actual
+    if st.session_state.yarda_actual == 50:
+        yard_str = "50"
+    else:
+        yard_str = f"-{st.session_state.yarda_actual}" if st.session_state.territorio == "Propio" else f"{st.session_state.yarda_actual}"
     
-    # Función para extraer el número y agregarle el '#' como en Hudl
+    play_type_str = "Run" if st.session_state.resultado in ["Rush", "Scramble"] else "Pass"
+    
     def get_num(name):
         val = name.split(" - ")[0] if name not in ["N/A", ""] else ""
         return f"#{val}" if val else ""
     
-    # ESTRUCTURA EXACTA A LA IMAGEN DE HUDL
+    # ESTRUCTURA EXCLUSIVA Y EXACTA A LA IMAGEN DE HUDL (25 COLUMNAS EXACTAS)
     nueva_jugada = {
-        "TITLE": titulo_exportacion,  
         "PLAY #": len(st.session_state.lista_jugadas) + 1,
         "ODK": "",
         "QTR": "",
         "DN": st.session_state.down,
         "DIST": st.session_state.distancia,        
-        "YARD LN": st.session_state.yarda_actual if st.session_state.yarda_actual == 50 else (f"-{st.session_state.yarda_actual}" if st.session_state.territorio == "Propio" else f"{st.session_state.yarda_actual}"),
+        "YARD LN": yard_str,
         "HASH": st.session_state.hash_mark, 
         "PERSONNEL": "",
         "OFF FORM": "",
@@ -388,8 +389,7 @@ if ganancia_final is not None:
         "INTERCEPTED BY": get_num(int_val) if st.session_state.resultado == "Interception" else "",
         "TACKLER1": get_num(d1_val),
         "TACKLER": get_num(d2_val),
-        "OBJETIVO OFF": "",
-        "DIRECTION": st.session_state.direccion_actual
+        "OBJETIVO OFF": ""
     }
     st.session_state.lista_jugadas.append(nueva_jugada)
     
@@ -450,12 +450,13 @@ if st.session_state.lista_jugadas:
         df_jugadas = pd.DataFrame(st.session_state.lista_jugadas)
         fecha_hoy = datetime.now().strftime("%d-%m-%Y")
         
+        titulo_exportacion = f"{periodo_actual} {st.session_state.down_drill_sel}" if st.session_state.down_drill_sel != "N/A" else periodo_actual
         str_down = st.session_state.down_drill_sel.replace("D", "down") if st.session_state.down_drill_sel != "N/A" else ""
         nombre_descarga = f"{periodo_actual} {str_down} {fecha_hoy}".strip().replace("  ", " ")
         
         c_csv, c_excel, c_del = st.columns(3)
         with c_csv:
-            csv_data = df_jugadas.to_csv(index=False).encode('utf-8')
+            csv_data = df_jugadas.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
             st.download_button("Descargar CSV (Hudl)", data=csv_data, file_name=f"{nombre_descarga}.csv", mime='text/csv', use_container_width=True)
         with c_excel:
             excel_buffer = io.BytesIO()
